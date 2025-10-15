@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Video DB</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo">homeVideo<span>DB</span></div>
+        <nav class="nav-links">
+            <a href="#hero">Ana Sayfa</a>
+            <a href="#continue">Devam Ediliyor</a>
+            <a href="#collections">Koleksiyonlar</a>
+        </nav>
+        <div class="search">
+            <input id="search-input" type="search" placeholder="Drone çekimi, düğün filmi, edit...">
+            <div id="search-fallback" class="search-fallback hidden">
+                <span>Yerelde eşleşme bulunamadı.</span>
+                <button id="search-online-button" class="btn btn-link">⚡ Online ara</button>
+            </div>
+        </div>
+    </header>
+
+    <section id="search-online-panel" class="search-online hidden" aria-live="polite">
+        <div class="search-online-header">
+            <h2 id="search-online-title"></h2>
+            <button id="search-online-close" class="btn btn-secondary btn-small">Kapat</button>
+        </div>
+        <div id="search-online-status" class="search-online-status"></div>
+        <ul id="search-online-results" class="search-online-results"></ul>
+    </section>
+
+    <section id="hero" class="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <p class="hero-tag">Özel Arşiv</p>
+            <h1 id="hero-title"></h1>
+            <p id="hero-description"></p>
+            <div class="hero-actions">
+                <button id="hero-play" class="btn btn-primary">▶ İzlemeye Başla</button>
+                <button id="hero-more" class="btn btn-secondary">ℹ Daha Fazla Bilgi</button>
+            </div>
+        </div>
+    </section>
+
+
+    <main>
+
+        <section id="alerts" class="alerts hidden">
+            <div class="alerts-header">
+                <h2>Eksik Bilgi Uyarıları</h2>
+                <button id="rescan-button" class="btn btn-link">↻ Yeniden Tara</button>
+            </div>
+            <p class="alerts-description">Otomatik bilgiler bulunamayan videolar aşağıda listelenir. Son tarama: <span id="last-scan">-</span>. Birini seçip eksik alanları doldurabilirsin.</p>
+            <ul id="alert-list" class="alert-list"></ul>
+            <form id="manual-form" class="manual-form hidden">
+                <input type="hidden" id="manual-id">
+                <div class="form-grid">
+                    <label>Başlık
+                        <input type="text" id="manual-title" required>
+                    </label>
+                    <label>Yıl
+                        <input type="text" id="manual-year" placeholder="2004">
+                    </label>
+                    <label>Süre
+                        <input type="text" id="manual-duration" placeholder="108 dk">
+                    </label>
+                    <label>Koleksiyon
+                        <input type="text" id="manual-collection" placeholder="Drone Çekimleri">
+                    </label>
+                    <label>Etiketler
+                        <input type="text" id="manual-tags" placeholder="drone, doğa, kutlama">
+                        <small>Virgülle ayır.</small>
+                    </label>
+                    <label>Poster URL
+                        <input type="text" id="manual-poster" placeholder="https://...">
+                    </label>
+                    <label>Arkaplan URL
+                        <input type="text" id="manual-backdrop" placeholder="https://...">
+                    </label>
+                </div>
+                <label>Açıklama
+                    <textarea id="manual-description" rows="4" required></textarea>
+                </label>
+                <div class="manual-actions">
+                    <button type="button" id="manual-cancel" class="btn btn-secondary">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+                <p id="manual-feedback" class="manual-feedback"></p>
+            </form>
+        </section>
+        <section id="continue" class="row continue-row hidden">
+            <h2>Devam Ettiklerin</h2>
+            <div class="carousel" id="continue-carousel"></div>
+        </section>
+
+        <section id="collections" class="collections"></section>
+    </main>
+
+    <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <button id="modal-close" class="modal-close" aria-label="Kapat">✕</button>
+            <div class="modal-info">
+                <div class="modal-header">
+                    <h2 id="modal-title"></h2>
+                    <p id="modal-meta"></p>
+                </div>
+                <p id="modal-description" class="modal-description"></p>
+                <div class="modal-tags" id="modal-tags"></div>
+                <div class="modal-actions">
+                    <button id="modal-play" class="btn btn-primary">▶ Oynat</button>
+                    <button id="modal-resume" class="btn btn-secondary hidden">⏯ Devam Et</button>
+                </div>
+            </div>
+            <div class="modal-video">
+                <video id="modal-player" controls playsinline></video>
+                <div class="playback-controls">
+                    <div class="control-group">
+                        <label for="quality-select">Kalite</label>
+                        <select id="quality-select"></select>
+                    </div>
+                    <div class="control-group">
+                        <label for="subtitle-select">Altyazı</label>
+                        <select id="subtitle-select">
+                            <option value="off">Kapalı</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template id="card-template">
+        <article class="card">
+            <div class="card-poster">
+                <span class="card-progress"></span>
+                <div class="card-overlay">
+                    <h3 class="card-title"></h3>
+                    <p class="card-meta"></p>
+                </div>
+            </div>
+        </article>
+    </template>
+
+    <div id="download-panel" class="download-panel hidden" aria-live="polite">
+        <div class="download-panel-header">
+            <h3>İndirilenler</h3>
+            <button id="download-panel-close" class="btn btn-secondary btn-small" aria-label="İndirilenleri gizle">✕</button>
+        </div>
+        <p id="download-status-note" class="download-note hidden"></p>
+        <div id="download-list" class="download-list"></div>
+    </div>
+    <button id="download-panel-toggle" class="download-panel-toggle hidden" aria-haspopup="dialog" aria-controls="download-panel">
+        ⬇ İndirilenler
+        <span id="download-active-count" class="download-badge hidden"></span>
+    </button>
+
+    <section id="storage-card" class="storage-card hidden">
+        <div class="storage-card-header">
+            <h2>Disk Kullanımı</h2>
+            <span id="storage-caption" class="storage-caption"></span>
+        </div>
+        <div class="storage-bar" aria-hidden="true">
+            <div id="storage-segment-app" class="storage-segment storage-segment-app" style="width: 0%"></div>
+            <div id="storage-segment-other" class="storage-segment storage-segment-other" style="width: 0%"></div>
+            <div id="storage-segment-free" class="storage-segment storage-segment-free" style="width: 0%"></div>
+        </div>
+        <ul class="storage-legend" id="storage-legend">
+            <li>
+                <span class="legend-dot legend-app"></span>
+                <div>
+                    <p>homeVideoDB</p>
+                    <strong id="storage-app-size">-</strong>
+                </div>
+            </li>
+            <li>
+                <span class="legend-dot legend-other"></span>
+                <div>
+                    <p>Diğer Kullanım</p>
+                    <strong id="storage-other-size">-</strong>
+                </div>
+            </li>
+            <li>
+                <span class="legend-dot legend-free"></span>
+                <div>
+                    <p>Boş Alan</p>
+                    <strong id="storage-free-size">-</strong>
+                </div>
+            </li>
+        </ul>
+    </section>
+
+    <script src="js/app.js" type="module"></script>
+</body>
+</html>
