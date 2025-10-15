@@ -1,0 +1,11 @@
+node_modules/
+.env
+.DS_Store
+*.mp4
+*.MP4
+*.srt
+*.json
+*.aria2
+*.vtt
+*.jpg
+*.session
