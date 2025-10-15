@@ -23,6 +23,7 @@
                 <span>Yerelde eşleşme bulunamadı.</span>
                 <button id="search-online-button" class="btn btn-link">⚡ Online ara</button>
             </div>
+            <button id="settings-button" class="btn btn-secondary btn-small settings-button">⚙ Ayarlar</button>
         </div>
     </header>
 
@@ -125,7 +126,7 @@
                         <label for="quality-select">Kalite</label>
                         <select id="quality-select"></select>
                     </div>
-                    <div class="control-group">
+                    <div class="control-group" id="subtitle-control-group">
                         <label for="subtitle-select">Altyazı</label>
                         <select id="subtitle-select">
                             <option value="off">Kapalı</option>
@@ -194,6 +195,63 @@
                 </div>
             </li>
         </ul>
+    </section>
+
+    <div id="settings-modal" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div class="dialog-backdrop" data-dialog-close="settings"></div>
+        <div class="dialog-content">
+            <div class="dialog-header">
+                <h2 id="settings-title">Ayarlar</h2>
+                <button id="settings-close" class="dialog-close" aria-label="Kapat">✕</button>
+            </div>
+            <p class="dialog-description">Torrent araması ve altyazı desteğini yerel tercihlerinden yönetebilirsin.</p>
+            <form id="settings-form" class="settings-form">
+                <label class="settings-toggle">
+                    <span>
+                        <strong>Torrent araması</strong>
+                        <small>YTS/Apibay sonuçlarını arayarak indirmeleri takip et.</small>
+                    </span>
+                    <input type="checkbox" id="toggle-torrent-search">
+                </label>
+                <label class="settings-toggle">
+                    <span>
+                        <strong>Altyazılar</strong>
+                        <small>Yerel altyazı dosyalarını oynatıcıda göster.</small>
+                    </span>
+                    <input type="checkbox" id="toggle-subtitles">
+                </label>
+            </form>
+        </div>
+    </div>
+
+    <section id="legal-consent" class="legal-consent hidden" role="dialog" aria-modal="true" aria-labelledby="legal-consent-title">
+        <div class="legal-consent-backdrop"></div>
+        <div class="legal-consent-content">
+            <h2 id="legal-consent-title">Yasal Uyarı &amp; Sorumluluk Reddi</h2>
+            <div class="legal-consent-scroll">
+                <p><strong>homeVideoDB</strong> yalnızca cihazındaki yerel video dosyalarını listeler; harici sunuculardan içerik barındırmaz, dağıtmaz ve korsan arşiv sunmaz.</p>
+                <p>Uygulamadaki torrent arama ve indirme kısayolları tamamen kullanıcının inisiyatifindedir. Bu bağlantılar üçüncü parti indekslere (ör. YTS, Apibay) yönlendirme yapar ve indirmenin sorumlusu kullanıcıdır.</p>
+                <h3>Sorumluluk Sende</h3>
+                <ul>
+                    <li>İndirdiğin veya paylaştığın içeriklerin hukuki haklarını sağlamak tamamen senin yükümlülüğündür.</li>
+                    <li>Geliştiriciler; kullanımından, hukuki risklerden veya üçüncü taraf içeriklerinden doğabilecek zararlardan sorumlu tutulamaz.</li>
+                    <li>Bu metin hukuki danışmanlık değildir; mevzuat ülkeye göre değişir (örn. FSEK, DMCA). Gerektiğinde uzman görüşü almalısın.</li>
+                </ul>
+                <h3>Kullanım Taahhüdün</h3>
+                <ol>
+                    <li>Yalnızca kamu malı, açık lisanslı veya hak sahibi tarafından izin verilmiş içerikleri indirirsin.</li>
+                    <li>Torrent aramalarını, lisansın açıkça izin verdiği içeriklerle sınırlandırırsın.</li>
+                    <li>Üçüncü parti arama sonuçlarının doğruluğunu ve yasal durumunu kendin teyit edersin.</li>
+                    <li>Tüm yasal sorumluluğun sana ait olduğunu kabul edersin.</li>
+                </ol>
+                <p>Bu şartları kabul etmiyorsan uygulamayı kullanmamalı ve torrent araması dahil tüm çevrimiçi özellikleri kapalı tutmalısın.</p>
+            </div>
+            <p id="legal-consent-message" class="legal-consent-message hidden"></p>
+            <div class="legal-consent-actions">
+                <button id="legal-reject" class="btn btn-secondary">Reddet</button>
+                <button id="legal-accept" class="btn btn-primary">Kabul Ediyorum</button>
+            </div>
+        </div>
     </section>
 
     <script src="js/app.js" type="module"></script>

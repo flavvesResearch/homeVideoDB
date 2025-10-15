@@ -56,12 +56,30 @@ const storageSegmentFree = document.getElementById('storage-segment-free');
 const storageAppSize = document.getElementById('storage-app-size');
 const storageOtherSize = document.getElementById('storage-other-size');
 const storageFreeSize = document.getElementById('storage-free-size');
+const settingsButton = document.getElementById('settings-button');
+const settingsModal = document.getElementById('settings-modal');
+const settingsClose = document.getElementById('settings-close');
+const torrentToggle = document.getElementById('toggle-torrent-search');
+const subtitleToggle = document.getElementById('toggle-subtitles');
+const subtitleControlGroup = document.getElementById('subtitle-control-group');
+const searchFallbackMessage = searchFallback ? searchFallback.querySelector('span') : null;
+const settingsBackdrop = settingsModal ? settingsModal.querySelector('.dialog-backdrop') : null;
+const legalConsentOverlay = document.getElementById('legal-consent');
+const legalAcceptButton = document.getElementById('legal-accept');
+const legalRejectButton = document.getElementById('legal-reject');
+const legalConsentMessage = document.getElementById('legal-consent-message');
 
 const STORAGE_KEY = 'homeVideoDB.progress';
 const HERO_ROTATE_INTERVAL = 3000;
 const HERO_TRANSITION_DURATION = 800;
 const HERO_TRANSITION_HALF = HERO_TRANSITION_DURATION / 2;
 const SUBTITLE_PREFERENCE_KEY = 'homeVideoDB.subtitlePreference';
+const FEATURE_FLAGS_KEY = 'homeVideoDB.features';
+const DEFAULT_FEATURE_FLAGS = {
+    torrentSearch: false,
+    subtitles: false
+};
+const LEGAL_CONSENT_KEY = 'homeVideoDB.legalConsent';
 const PREVIEW_START_SECONDS = 180;
 const PREVIEW_SHORT_FALLBACK = 10;
 const PREVIEW_END_BUFFER = 5;
@@ -87,6 +105,8 @@ let currentSearchValue = '';
 let lastSearchHasMatches = true;
 let onlineSearchAbort = null;
 let onlineSearchState = { query: '', loading: false, results: [], error: null };
+let featureFlags = loadFeatureFlags();
+let appInitialized = false;
 const downloadState = {
     items: new Map(),
     polling: null,
@@ -98,18 +118,29 @@ const downloadState = {
 };
 
 async function init() {
+    if (appInitialized) {
+        return;
+    }
+    appInitialized = true;
+    applyFeatureFlags();
     attachEvents();
     updateDownloadToggleVisibility();
     await loadLibrary();
     await loadStorageInfo();
-    try {
-        await refreshDownloadStatus(true);
-    } catch (error) {
-        console.warn('İndirme durumu alınamadı:', error.message);
-    }
-    if (!downloadState.disabled && downloadState.items.size > 0) {
-        ensureDownloadPolling();
-        updateDownloadToggleVisibility();
+    if (isFeatureEnabled('torrentSearch')) {
+        try {
+            await refreshDownloadStatus(true);
+        } catch (error) {
+            console.warn('İndirme durumu alınamadı:', error.message);
+        }
+        if (!downloadState.disabled && downloadState.items.size > 0) {
+            ensureDownloadPolling();
+            updateDownloadToggleVisibility();
+        }
+    } else {
+        closeSearchOnlinePanel(false);
+        downloadState.items.clear();
+        renderDownloadPanel();
     }
 }
 
@@ -608,16 +639,29 @@ function populateQualityOptions(video) {
 
 function populateSubtitleOptions(video) {
     if (!subtitleSelect) return;
+    const subtitlesEnabled = isFeatureEnabled('subtitles');
     subtitleSelect.innerHTML = '';
     const offOption = document.createElement('option');
     offOption.value = 'off';
     offOption.textContent = 'Kapalı';
     subtitleSelect.appendChild(offOption);
+    subtitleSelect.value = 'off';
+
+    if (!subtitlesEnabled) {
+        subtitleSelect.disabled = true;
+        if (subtitleControlGroup) {
+            subtitleControlGroup.classList.add('hidden');
+        }
+        return;
+    }
+
+    if (subtitleControlGroup) {
+        subtitleControlGroup.classList.remove('hidden');
+    }
 
     const subtitles = Array.isArray(video.subtitles) ? video.subtitles : [];
     if (subtitles.length === 0) {
         subtitleSelect.disabled = true;
-        subtitleSelect.value = 'off';
         return;
     }
 
@@ -641,6 +685,9 @@ function populateSubtitleOptions(video) {
 }
 
 function getPreferredSubtitleForVideo(video) {
+    if (!isFeatureEnabled('subtitles')) {
+        return 'off';
+    }
     const subtitles = Array.isArray(video.subtitles) ? video.subtitles : [];
     if (subtitles.length === 0) {
         return 'off';
@@ -697,6 +744,15 @@ function prepareSubtitleTracks(video) {
 }
 
 function applySubtitleSelection(value) {
+    if (!isFeatureEnabled('subtitles')) {
+        Array.from(modalPlayer.textTracks).forEach(track => {
+            track.mode = 'disabled';
+        });
+        if (subtitleSelect && subtitleSelect.value !== 'off') {
+            subtitleSelect.value = 'off';
+        }
+        return;
+    }
     const selection = subtitleTracks.size > 0 && value && subtitleTracks.has(value) ? value : 'off';
     if (selection === 'off') {
         Array.from(modalPlayer.textTracks).forEach(track => {
@@ -761,7 +817,7 @@ function playVideo(video, startTime = 0) {
         modalPlayer.appendChild(sourceEl);
     });
 
-    if (Array.isArray(video.subtitles) && video.subtitles.length > 0) {
+    if (isFeatureEnabled('subtitles') && Array.isArray(video.subtitles) && video.subtitles.length > 0) {
         video.subtitles.forEach(subtitle => {
             if (!subtitle?.src) return;
             const trackEl = document.createElement('track');
@@ -1104,6 +1160,10 @@ function attachEvents() {
     });
     if (subtitleSelect) {
         subtitleSelect.addEventListener('change', () => {
+            if (!isFeatureEnabled('subtitles')) {
+                subtitleSelect.value = 'off';
+                return;
+            }
             if (!currentVideo) {
                 applySubtitleSelection(subtitleSelect.value);
                 return;
@@ -1123,6 +1183,8 @@ function attachEvents() {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
             closeModal();
+        } else if (event.key === 'Escape' && settingsModal && !settingsModal.classList.contains('hidden')) {
+            closeSettingsModal();
         }
     });
 
@@ -1136,6 +1198,10 @@ function attachEvents() {
     }
     if (searchOnlineButton) {
         searchOnlineButton.addEventListener('click', () => {
+            if (!isFeatureEnabled('torrentSearch')) {
+                openSettingsModal();
+                return;
+            }
             if (currentSearchValue.length >= 2) {
                 startOnlineSearch(currentSearchValue);
             }
@@ -1149,6 +1215,9 @@ function attachEvents() {
     }
     if (downloadPanelToggle) {
         downloadPanelToggle.addEventListener('click', () => {
+            if (!isFeatureEnabled('torrentSearch')) {
+                return;
+            }
             if (downloadState.open) {
                 closeDownloadPanel();
             } else {
@@ -1164,6 +1233,25 @@ function attachEvents() {
     }
     if (manualCancelButton) {
         manualCancelButton.addEventListener('click', () => closeManualForm());
+    }
+    if (settingsButton) {
+        settingsButton.addEventListener('click', () => openSettingsModal());
+    }
+    if (settingsClose) {
+        settingsClose.addEventListener('click', () => closeSettingsModal());
+    }
+    if (settingsBackdrop) {
+        settingsBackdrop.addEventListener('click', () => closeSettingsModal());
+    }
+    if (torrentToggle) {
+        torrentToggle.addEventListener('change', () => {
+            setFeatureFlag('torrentSearch', torrentToggle.checked);
+        });
+    }
+    if (subtitleToggle) {
+        subtitleToggle.addEventListener('change', () => {
+            setFeatureFlag('subtitles', subtitleToggle.checked);
+        });
     }
 }
 
@@ -1208,12 +1296,17 @@ function handleSearchEnter() {
         return;
     }
     if (!lastSearchHasMatches && currentSearchValue.length >= 2) {
+        if (!isFeatureEnabled('torrentSearch')) {
+            openSettingsModal();
+            return;
+        }
         startOnlineSearch(currentSearchValue);
     }
 }
 
 function updateSearchFallback(query, hasMatches) {
     if (!searchFallback) return;
+    applySearchFallbackState();
     if (!query) {
         searchFallback.classList.add('hidden');
         return;
@@ -1226,7 +1319,7 @@ function updateSearchFallback(query, hasMatches) {
 }
 
 function openSearchOnlinePanel(query) {
-    if (!searchOnlinePanel) return;
+    if (!searchOnlinePanel || !isFeatureEnabled('torrentSearch')) return;
     searchOnlinePanel.classList.remove('hidden');
     if (searchOnlineTitle) {
         searchOnlineTitle.textContent = '"' + query + '" için çevrimiçi sonuçlar';
@@ -1258,6 +1351,10 @@ function closeSearchOnlinePanel(forceAbort = true) {
 }
 
 async function startOnlineSearch(query) {
+    if (!isFeatureEnabled('torrentSearch')) {
+        applySearchFallbackState();
+        return;
+    }
     const trimmed = (query || '').trim();
     if (trimmed.length < 2) {
         return;
@@ -1370,6 +1467,9 @@ function renderSearchOnlineResults(results, query) {
 }
 
 async function startTorrentDownload(result, button) {
+    if (!isFeatureEnabled('torrentSearch')) {
+        return;
+    }
     if (!result?.magnet) {
         return;
     }
@@ -1419,6 +1519,9 @@ async function startTorrentDownload(result, button) {
 }
 
 function handleDownloadStarted(download) {
+    if (!isFeatureEnabled('torrentSearch')) {
+        return;
+    }
     if (!download || !download.id) return;
     downloadState.disabled = false;
     downloadState.statusMessage = null;
@@ -1442,6 +1545,9 @@ function updateDownloadStatusNote(message, isError = false) {
 }
 
 async function requestDownloadAction(gid, action) {
+    if (!isFeatureEnabled('torrentSearch')) {
+        throw new Error('Torrent indirme devre dışı.');
+    }
     if (!gid) {
         throw new Error('İndirme kimliği bulunamadı');
     }
@@ -1502,6 +1608,14 @@ function createDownloadControl(label, variant = 'default') {
 
 function renderDownloadPanel() {
     if (!downloadList) return;
+    if (!isFeatureEnabled('torrentSearch')) {
+        downloadList.innerHTML = '';
+        if (downloadPanel) {
+            downloadPanel.classList.add('hidden');
+        }
+        updateDownloadStatusNote('', false);
+        return;
+    }
     updateDownloadStatusNote(downloadState.statusMessage, downloadState.disabled);
     downloadList.innerHTML = '';
 
@@ -1620,7 +1734,7 @@ function renderDownloadPanel() {
 }
 
 function openDownloadPanel(forceOpen = false) {
-    if (!downloadPanel) return;
+    if (!downloadPanel || !isFeatureEnabled('torrentSearch')) return;
     downloadPanel.classList.remove('hidden');
     downloadState.open = true;
     if (forceOpen) {
@@ -1640,6 +1754,13 @@ function closeDownloadPanel() {
 
 function updateDownloadToggleVisibility() {
     if (!downloadPanelToggle) return;
+    if (!isFeatureEnabled('torrentSearch')) {
+        downloadPanelToggle.classList.add('hidden');
+        if (downloadPanel) {
+            downloadPanel.classList.add('hidden');
+        }
+        return;
+    }
     if (downloadState.disabled) {
         downloadPanelToggle.classList.remove('hidden');
         if (downloadActiveCount) {
@@ -1667,6 +1788,9 @@ function updateDownloadToggleVisibility() {
 }
 
 function ensureDownloadPolling() {
+    if (!isFeatureEnabled('torrentSearch')) {
+        return;
+    }
     if (downloadState.disabled) {
         return;
     }
@@ -1688,6 +1812,10 @@ function stopDownloadPolling() {
 }
 
 function evaluateDownloadPolling(downloads = null) {
+    if (!isFeatureEnabled('torrentSearch')) {
+        stopDownloadPolling();
+        return;
+    }
     if (downloadState.disabled) {
         stopDownloadPolling();
         return;
@@ -1700,6 +1828,11 @@ function evaluateDownloadPolling(downloads = null) {
 }
 
 async function refreshDownloadStatus(force = false) {
+    if (!isFeatureEnabled('torrentSearch')) {
+        stopDownloadPolling();
+        downloadState.fetching = false;
+        return;
+    }
     if (downloadState.fetching) {
         return;
     }
@@ -1750,6 +1883,226 @@ async function refreshDownloadStatus(force = false) {
     } finally {
         downloadState.fetching = false;
     }
+}
+
+function openSettingsModal() {
+    if (!settingsModal) return;
+    applyFeatureFlags();
+    settingsModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeSettingsModal() {
+    if (!settingsModal) return;
+    settingsModal.classList.add('hidden');
+    if (modal.classList.contains('hidden')) {
+        document.body.style.overflow = '';
+    }
+}
+
+function applyFeatureFlags() {
+    if (!featureFlags || typeof featureFlags !== 'object') {
+        featureFlags = { ...DEFAULT_FEATURE_FLAGS };
+    }
+    applySearchFallbackState();
+    applyTorrentFeatureState(isFeatureEnabled('torrentSearch'));
+    applySubtitleFeatureState(isFeatureEnabled('subtitles'));
+    if (torrentToggle) {
+        torrentToggle.checked = isFeatureEnabled('torrentSearch');
+    }
+    if (subtitleToggle) {
+        subtitleToggle.checked = isFeatureEnabled('subtitles');
+    }
+}
+
+function applyTorrentFeatureState(enabled) {
+    if (searchOnlineButton) {
+        searchOnlineButton.classList.toggle('hidden', !enabled);
+    }
+    if (!enabled) {
+        closeSearchOnlinePanel();
+        stopDownloadPolling();
+        downloadState.open = false;
+        downloadState.items.clear();
+        downloadState.completedSeen.clear();
+        downloadState.statusMessage = null;
+    }
+    renderDownloadPanel();
+    updateDownloadToggleVisibility();
+}
+
+function applySubtitleFeatureState(enabled) {
+    if (subtitleControlGroup) {
+        subtitleControlGroup.classList.toggle('hidden', !enabled);
+    }
+    if (!subtitleSelect) {
+        return;
+    }
+    if (!enabled) {
+        subtitleSelect.innerHTML = '';
+        const offOption = document.createElement('option');
+        offOption.value = 'off';
+        offOption.textContent = 'Kapalı';
+        subtitleSelect.appendChild(offOption);
+        subtitleSelect.value = 'off';
+        subtitleSelect.disabled = true;
+        subtitleTracks.clear();
+        Array.from(modalPlayer.querySelectorAll('track')).forEach(track => track.remove());
+        applySubtitleSelection('off');
+        return;
+    }
+
+    subtitleSelect.disabled = false;
+    if (currentVideo && !modal.classList.contains('hidden')) {
+        populateSubtitleOptions(currentVideo);
+        Array.from(modalPlayer.querySelectorAll('track')).forEach(track => track.remove());
+        if (Array.isArray(currentVideo.subtitles)) {
+            currentVideo.subtitles.forEach(subtitle => {
+                if (!subtitle?.src) return;
+                const trackEl = document.createElement('track');
+                trackEl.kind = 'subtitles';
+                trackEl.label = subtitle.label || subtitle.lang?.toUpperCase() || 'Altyazı';
+                if (subtitle.lang) {
+                    trackEl.srclang = subtitle.lang;
+                }
+                trackEl.src = subtitle.src;
+                if (subtitle.default) {
+                    trackEl.default = true;
+                }
+                trackEl.setAttribute('data-track-id', subtitle.id);
+                if (subtitle.lang) {
+                    trackEl.setAttribute('data-track-lang', subtitle.lang);
+                }
+                modalPlayer.appendChild(trackEl);
+            });
+            prepareSubtitleTracks(currentVideo);
+        }
+    }
+}
+
+function applySearchFallbackState() {
+    if (!searchFallback) return;
+    const enabled = isFeatureEnabled('torrentSearch');
+    if (searchOnlineButton) {
+        searchOnlineButton.classList.toggle('hidden', !enabled);
+    }
+    if (searchFallbackMessage) {
+        searchFallbackMessage.textContent = enabled
+            ? 'Yerelde eşleşme bulunamadı.'
+            : 'Yerelde eşleşme bulunamadı. Ayarlardan torrent aramasını açarak çevrimiçi sonuçlara bakabilirsin.';
+    }
+}
+
+function setFeatureFlag(key, value) {
+    if (!(key in DEFAULT_FEATURE_FLAGS)) {
+        return;
+    }
+    const enabled = Boolean(value);
+    if (featureFlags[key] === enabled) {
+        return;
+    }
+    featureFlags = {
+        ...featureFlags,
+        [key]: enabled
+    };
+    saveFeatureFlags(featureFlags);
+    applyFeatureFlags();
+    if (key === 'torrentSearch' && enabled) {
+        refreshDownloadStatus(true).catch(() => {});
+    }
+    if (key === 'subtitles' && !enabled) {
+        applySubtitleSelection('off');
+    }
+}
+
+function loadFeatureFlags() {
+    try {
+        const stored = localStorage.getItem(FEATURE_FLAGS_KEY);
+        if (!stored) {
+            return { ...DEFAULT_FEATURE_FLAGS };
+        }
+        const parsed = JSON.parse(stored);
+        return {
+            torrentSearch: Boolean(parsed?.torrentSearch),
+            subtitles: Boolean(parsed?.subtitles)
+        };
+    } catch (error) {
+        console.warn('Özellik tercihleri okunamadı', error);
+        return { ...DEFAULT_FEATURE_FLAGS };
+    }
+}
+
+function saveFeatureFlags(flags) {
+    try {
+        localStorage.setItem(FEATURE_FLAGS_KEY, JSON.stringify(flags));
+    } catch (error) {
+        console.warn('Özellik tercihleri kaydedilemedi', error);
+    }
+}
+
+function isFeatureEnabled(key) {
+    if (!featureFlags || typeof featureFlags !== 'object') {
+        return Boolean(DEFAULT_FEATURE_FLAGS[key]);
+    }
+    return Boolean(featureFlags[key]);
+}
+
+function loadLegalConsent() {
+    try {
+        const stored = localStorage.getItem(LEGAL_CONSENT_KEY);
+        if (!stored) {
+            return null;
+        }
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object' && parsed.accepted === true) {
+            return parsed;
+        }
+        return null;
+    } catch (error) {
+        console.warn('Yasal onay bilgisi okunamadı', error);
+        return null;
+    }
+}
+
+function saveLegalConsent() {
+    try {
+        const payload = {
+            accepted: true,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(LEGAL_CONSENT_KEY, JSON.stringify(payload));
+    } catch (error) {
+        console.warn('Yasal onay kaydedilemedi', error);
+    }
+}
+
+function hasLegalConsent() {
+    const consent = loadLegalConsent();
+    return Boolean(consent && consent.accepted === true);
+}
+
+function showLegalConsentOverlay() {
+    if (!legalConsentOverlay) return;
+    legalConsentOverlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    if (legalConsentMessage) {
+        legalConsentMessage.textContent = '';
+        legalConsentMessage.classList.add('hidden');
+    }
+}
+
+function hideLegalConsentOverlay() {
+    if (!legalConsentOverlay) return;
+    legalConsentOverlay.classList.add('hidden');
+    if (modal.classList.contains('hidden') && (!settingsModal || settingsModal.classList.contains('hidden'))) {
+        document.body.style.overflow = '';
+    }
+}
+
+function handleLegalRejection() {
+    if (!legalConsentMessage) return;
+    legalConsentMessage.textContent = 'Uygulamayı yalnızca bu şartları kabul ederek kullanabilirsin. Devam etmek istemiyorsan pencereyi kapatabilirsin.';
+    legalConsentMessage.classList.remove('hidden');
 }
 
 function createMetaSpan(text) {
@@ -1835,4 +2188,23 @@ function normalizeCount(value) {
     return Number.isFinite(parsed) ? parsed : NaN;
 }
 
-init();
+if (legalAcceptButton) {
+    legalAcceptButton.addEventListener('click', () => {
+        saveLegalConsent();
+        hideLegalConsentOverlay();
+        init();
+    });
+}
+
+if (legalRejectButton) {
+    legalRejectButton.addEventListener('click', () => {
+        handleLegalRejection();
+    });
+}
+
+if (hasLegalConsent()) {
+    hideLegalConsentOverlay();
+    init();
+} else {
+    showLegalConsentOverlay();
+}

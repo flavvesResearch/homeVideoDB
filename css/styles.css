@@ -105,6 +105,17 @@ body::before {
     padding: 0.35rem 0.9rem;
 }
 
+.settings-button {
+    align-self: flex-end;
+    margin-top: 0.3rem;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.settings-button:hover,
+.settings-button:focus-visible {
+    background: rgba(255, 255, 255, 0.18);
+}
+
 .search-online {
     margin: 0 3.5vw;
     margin-top: 1rem;
@@ -766,6 +777,219 @@ main {
     max-height: 20rem;
     border-radius: 1rem;
     background: #000;
+}
+
+.dialog {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    z-index: 120;
+}
+
+.dialog-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 12, 0.7);
+    backdrop-filter: blur(10px);
+}
+
+.dialog-content {
+    position: relative;
+    z-index: 1;
+    width: min(32rem, 92vw);
+    background: rgba(15, 15, 24, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.1rem;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-shadow: 0 2rem 4rem rgba(0, 0, 0, 0.35);
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.dialog-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.dialog-close {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0.25rem 0.45rem;
+    border-radius: 999px;
+    transition: background var(--transition);
+}
+
+.dialog-close:hover,
+.dialog-close:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.dialog-description {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.settings-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.settings-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 1.2rem;
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.settings-toggle span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    color: var(--text);
+}
+
+.settings-toggle strong {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.settings-toggle small {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.settings-toggle input[type="checkbox"] {
+    width: 2.8rem;
+    height: 1.4rem;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+
+.settings-toggle input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: 0.2rem;
+    left: 0.25rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #ffffff;
+    transition: transform var(--transition);
+}
+
+.settings-toggle input[type="checkbox"]:checked {
+    background: var(--accent);
+}
+
+.settings-toggle input[type="checkbox"]:checked::after {
+    transform: translateX(1.3rem);
+}
+
+.settings-toggle input[type="checkbox"]:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.35);
+    outline-offset: 2px;
+}
+
+.legal-consent {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+}
+
+.legal-consent-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 12, 0.85);
+    backdrop-filter: blur(12px);
+}
+
+.legal-consent-content {
+    position: relative;
+    z-index: 1;
+    width: min(50rem, 94vw);
+    max-height: 90vh;
+    background: rgba(15, 15, 24, 0.98);
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-shadow: 0 2.5rem 4.5rem rgba(0, 0, 0, 0.45);
+}
+
+.legal-consent-content h2 {
+    margin: 0;
+    font-size: 1.45rem;
+}
+
+.legal-consent-scroll {
+    overflow-y: auto;
+    max-height: min(60vh, 55rem);
+    padding-right: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.legal-consent-scroll strong {
+    color: var(--text);
+}
+
+.legal-consent-scroll h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text);
+}
+
+.legal-consent-scroll ul,
+.legal-consent-scroll ol {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 0.4rem;
+}
+
+.legal-consent-message {
+    margin: 0;
+    color: #ff7272;
+    font-weight: 500;
+}
+
+.legal-consent-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.legal-consent-actions .btn {
+    min-width: 8rem;
 }
 
 .playback-controls {
