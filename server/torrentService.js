@@ -627,6 +627,8 @@ class TorrentManager {
         // Aria2'nin dosyaları kapatması için kısa bir gecikme ekle
         setTimeout(() => {
           this.triggerRescan(record);
+          // Tamamlanan indirmeyi aria2'den kaldır (session'dan temizlemek için)
+          this.removeCompletedFromAria2(gid);
         }, 2000);
       }
 
@@ -663,6 +665,21 @@ class TorrentManager {
         // Hata durumunda rescan flag'i sıfırla ki tekrar denenebilsin
         record.rescanTriggered = false;
       });
+  }
+
+  async removeCompletedFromAria2(gid) {
+    if (!this.aria2 || !gid) {
+      return;
+    }
+    try {
+      // Tamamlanan indirmeyi aria2'den kaldır
+      // Bu, session dosyasından da silinmesini sağlar
+      await this.aria2.call('removeDownloadResult', gid);
+      console.log(`🗑️  Tamamlanan indirme aria2'den temizlendi: ${gid}`);
+    } catch (error) {
+      // Hata olsa bile devam et (zaten tamamlanmış)
+      console.warn(`⚠️  Aria2'den temizleme hatası: ${gid}`, error.message);
+    }
   }
 
   registerShutdownHooks() {
