@@ -427,6 +427,14 @@ class LibraryManager {
       if (entry.name.startsWith('.')) continue;
       // .aria2 uzantılı dosyaları atla (halen indiriliyor)
       if (entry.name.endsWith('.aria2')) continue;
+      
+      // Sample/demo dosyalarını atla
+      const lowerName = entry.name.toLowerCase();
+      if (lowerName.includes('sample') || lowerName.includes('rarbg')) {
+        console.log(`⏭ Sample/demo dosyası atlanıyor: ${entry.name}`);
+        continue;
+      }
+      
       const absolute = path.join(dir, entry.name);
       const relative = path.join(prefix, entry.name);
       if (entry.isDirectory()) {
