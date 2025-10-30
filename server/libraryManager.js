@@ -372,7 +372,19 @@ class LibraryManager {
   async load() {
     try {
       const raw = await fs.readFile(DATA_FILE, 'utf-8');
-      this.data = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      
+      // Eski format uyumluluğu: Eğer dosya array ise yeni formata çevir
+      if (Array.isArray(parsed)) {
+        this.data = {
+          videos: parsed,
+          unmatched: [],
+          lastScan: null
+        };
+      } else {
+        this.data = parsed;
+      }
+      
       if (!this.data.videos) {
         this.data.videos = [];
       }
@@ -413,6 +425,8 @@ class LibraryManager {
     const files = [];
     for (const entry of entries) {
       if (entry.name.startsWith('.')) continue;
+      // .aria2 uzantılı dosyaları atla (halen indiriliyor)
+      if (entry.name.endsWith('.aria2')) continue;
       const absolute = path.join(dir, entry.name);
       const relative = path.join(prefix, entry.name);
       if (entry.isDirectory()) {
@@ -593,16 +607,22 @@ class LibraryManager {
         : []
     );
     let missingLangs = languages.filter(lang => !existingLangs.has(lang));
+    
+    // Altyazı siteleri genelde İngilizce orijinal adı kullanır
+    // originalTitle TMDB'den geliyor ve genelde İngilizce
+    // Önce originalTitle'ı dene, sonra diğerlerini
     const titleCandidates = [...new Set([
-      video.originalTitle,
-      video.title,
-      parsedMeta?.title,
-      parsedMeta?.rawTitle
+      video.originalTitle,  // TMDB'den gelen orijinal ad (genelde İngilizce)
+      parsedMeta?.rawTitle, // Dosya adından parse edilen ham ad
+      parsedMeta?.title,    // Dosya adından parse edilen temiz ad
+      video.title          // TMDB'den gelen Türkçe ad (en son seçenek)
     ].filter(Boolean))];
 
     if (titleCandidates.length === 0 || missingLangs.length === 0) {
       return;
     }
+    
+    console.log(`📥 Altyazı aranacak: [${titleCandidates.map((t, i) => `${i + 1}:"${t}"`).join(', ')}] için diller: [${missingLangs.join(', ')}]`);
 
     let downloaded = false;
     const SCRIPT_COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12 saat
@@ -865,7 +885,6 @@ class LibraryManager {
         video.fileName = relativePath;
         this.ensureSource(video, relativePath);
         await this.ensureSubtitles(video, relativePath);
-        await this.tryFetchRemoteSubtitles(video, relativePath, parsed);
 
         const shouldFetch = forceRefresh || !isMetadataComplete(video) || video.status !== 'ready';
         if (shouldFetch) {
@@ -880,6 +899,10 @@ class LibraryManager {
             this.markUnmatched(video, reason);
           }
         }
+        
+        // TMDB'den metadata çekildikten SONRA altyazı ara
+        // (originalTitle TMDB'den geliyor ve genelde İngilizce)
+        await this.tryFetchRemoteSubtitles(video, relativePath, parsed);
       }
 
       this.data.videos = this.data.videos.filter(video => {
@@ -1289,6 +1312,155 @@ class LibraryManager {
       return null;
     }
     return { ...entry, body };
+  }
+
+  async renameVideo(id, newTitle) {
+    await this.load();
+    const video = this.data.videos.find(item => item.id === id);
+    if (!video) {
+      throw new Error('Video bulunamadı');
+    }
+    
+    const oldFileName = video.fileName;
+    if (!oldFileName) {
+      throw new Error('Video dosya adı bulunamadı');
+    }
+
+    // Eski dosya yolu
+    const oldPath = path.join(MEDIA_DIR, oldFileName);
+    const oldDir = path.dirname(oldPath);
+    const oldExt = path.extname(oldPath);
+    
+    // Yeni dosya adı oluştur (güvenli karakterler)
+    const safeNewTitle = newTitle
+      .replace(/[<>:"/\\|?*]/g, '') // Yasak karakterleri kaldır
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Yıl varsa koru
+    const yearSuffix = video.year ? ` (${video.year})` : '';
+    const newFileName = `${safeNewTitle}${yearSuffix}${oldExt}`;
+    const newPath = path.join(oldDir, newFileName);
+    
+    // Dosyanın gerçekten var olup olmadığını kontrol et
+    try {
+      await fs.access(oldPath);
+    } catch (error) {
+      console.warn(`Dosya bulunamadı: ${oldPath}`);
+      // Dosya yoksa sadece metadata güncelle
+      video.title = newTitle;
+      video.originalTitle = newTitle;
+      video.lastManualUpdate = new Date().toISOString();
+      
+      // TMDB'den bilgi çekmeyi dene
+      const parsed = parseFileName(newTitle);
+      const metadata = await this.fetchMetadata(parsed);
+      if (metadata && !metadata.error) {
+        this.applyMetadata(video, metadata);
+        video.status = 'ready';
+        video.lastSync = new Date().toISOString();
+      } else {
+        if (video.status === 'pending') {
+          video.status = 'ready';
+        }
+        this.clearUnmatched(video.id);
+      }
+      
+      await this.save();
+      return video;
+    }
+    
+    // Dosyayı yeniden adlandır
+    try {
+      await fs.rename(oldPath, newPath);
+      console.log(`✓ Dosya yeniden adlandırıldı: ${oldFileName} -> ${newFileName}`);
+      
+      // Altyazı dosyalarını da yeniden adlandır
+      await this.renameSubtitleFiles(video, oldPath, newPath, safeNewTitle);
+      
+      // Video metadata güncelle
+      const newRelativePath = path.relative(MEDIA_DIR, newPath);
+      video.fileName = newRelativePath;
+      video.title = newTitle;
+      video.originalTitle = newTitle;
+      video.lastManualUpdate = new Date().toISOString();
+      
+      // Kaynakları güncelle
+      this.ensureSource(video, newRelativePath);
+      
+      // Altyazıları yeniden tara
+      await this.ensureSubtitles(video, newRelativePath);
+      
+      // TMDB'den bilgi çekmeyi dene
+      const parsed = parseFileName(newTitle + yearSuffix);
+      const metadata = await this.fetchMetadata(parsed);
+      if (metadata && !metadata.error) {
+        this.applyMetadata(video, metadata);
+        video.status = 'ready';
+        video.lastSync = new Date().toISOString();
+        console.log(`✓ TMDB'den bilgiler alındı: ${metadata.title}`);
+      } else {
+        console.log(`⚠ TMDB'de bulunamadı: ${newTitle}`);
+        if (video.status === 'pending') {
+          video.status = 'ready';
+        }
+        this.clearUnmatched(video.id);
+      }
+      
+      await this.save();
+      return video;
+    } catch (error) {
+      console.error(`Dosya yeniden adlandırılamadı: ${error.message}`);
+      throw new Error(`Dosya yeniden adlandırılamadı: ${error.message}`);
+    }
+  }
+
+  async renameSubtitleFiles(video, oldVideoPath, newVideoPath, newBaseName) {
+    const oldDir = path.dirname(oldVideoPath);
+    const newDir = path.dirname(newVideoPath);
+    const oldBaseName = path.parse(oldVideoPath).name;
+    const newVideoBaseName = path.parse(newVideoPath).name;
+    
+    // Dizindeki tüm altyazı dosyalarını bul
+    let entries = [];
+    try {
+      entries = await fs.readdir(oldDir, { withFileTypes: true });
+    } catch (error) {
+      console.warn(`  ⚠ Dizin okunamadı: ${oldDir}`);
+      return;
+    }
+    
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      
+      const ext = path.extname(entry.name).toLowerCase();
+      if (!SUBTITLE_EXTENSIONS.has(ext)) continue;
+      
+      const candidateBase = path.parse(entry.name).name;
+      
+      // Eski video adıyla başlayan altyazı dosyalarını bul
+      if (!candidateBase.toLowerCase().startsWith(oldBaseName.toLowerCase())) {
+        continue;
+      }
+      
+      const oldSubPath = path.join(oldDir, entry.name);
+      
+      // Dil kodunu tespit et (örn: .tr veya .en)
+      const remainder = candidateBase.slice(oldBaseName.length).replace(/^[._-]+/, '');
+      const langMatch = remainder.match(/^([a-z]{2})\b/i);
+      const langSuffix = langMatch ? `.${langMatch[1]}` : (remainder ? `.${remainder}` : '');
+      
+      // Yeni altyazı dosya adı
+      const newSubFileName = `${newVideoBaseName}${langSuffix}${ext}`;
+      const newSubPath = path.join(newDir, newSubFileName);
+      
+      try {
+        await fs.rename(oldSubPath, newSubPath);
+        console.log(`  ✓ Altyazı yeniden adlandırıldı: ${entry.name} -> ${newSubFileName}`);
+      } catch (error) {
+        console.warn(`  ⚠ Altyazı yeniden adlandırılamadı: ${entry.name} (${error.message})`);
+      }
+    }
   }
 
   async updateManualMetadata(id, payload) {

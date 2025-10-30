@@ -56,6 +56,23 @@ async function createServer() {
     }
   });
 
+  app.post('/api/rename', async (req, res, next) => {
+    try {
+      const { id, title } = req.body || {};
+      if (!id) {
+        return res.status(400).json({ error: 'id alanı zorunludur' });
+      }
+      if (!title || typeof title !== 'string' || title.trim() === '') {
+        return res.status(400).json({ error: 'Geçerli bir başlık girilmelidir' });
+      }
+      const video = await manager.renameVideo(id, title.trim());
+      const data = await manager.getLibrary();
+      res.json({ video, library: data });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.get('/api/torrents/search', async (req, res, next) => {
     try {
       const query = (req.query?.q || req.query?.query || '').toString().trim();

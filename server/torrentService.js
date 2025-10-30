@@ -623,7 +623,11 @@ class TorrentManager {
 
       if (record.status === 'completed' && !record.completedAt) {
         record.completedAt = new Date().toISOString();
-        this.triggerRescan(record);
+        // İndirme tamamlandı, kütüphaneyi güncelle
+        // Aria2'nin dosyaları kapatması için kısa bir gecikme ekle
+        setTimeout(() => {
+          this.triggerRescan(record);
+        }, 2000);
       }
 
       record.finalized = record.status === 'completed' || record.status === 'cancelled';
@@ -645,13 +649,19 @@ class TorrentManager {
       return;
     }
     record.rescanTriggered = true;
+    console.log(`✓ İndirme tamamlandı: "${record.name}" - Kütüphane taranıyor...`);
     this.libraryManager
       .scan({ forceRefresh: true })
-      .then(() => {
+      .then(async () => {
         record.libraryRefreshAt = new Date().toISOString();
+        const library = await this.libraryManager.getLibrary();
+        const videoCount = library?.videos?.length || 0;
+        console.log(`✓ Kütüphane güncellendi. Toplam ${videoCount} video bulundu.`);
       })
       .catch(error => {
-        console.warn('Kütüphane güncelleme başarısız:', error?.message || error);
+        console.warn('❌ Kütüphane güncelleme başarısız:', error?.message || error);
+        // Hata durumunda rescan flag'i sıfırla ki tekrar denenebilsin
+        record.rescanTriggered = false;
       });
   }
 

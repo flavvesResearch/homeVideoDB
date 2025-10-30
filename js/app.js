@@ -980,6 +980,14 @@ function renderAlerts(unmatched) {
 
         const actions = document.createElement('div');
         actions.className = 'alert-actions';
+        
+        const renameButton = document.createElement('button');
+        renameButton.type = 'button';
+        renameButton.className = 'btn btn-outline';
+        renameButton.textContent = '✏ Yeniden Adlandır';
+        renameButton.addEventListener('click', () => openRenameDialog(item.id, item.title || item.fileName));
+        actions.appendChild(renameButton);
+        
         const editButton = document.createElement('button');
         editButton.type = 'button';
         editButton.className = 'btn btn-outline';
@@ -2103,6 +2111,50 @@ function handleLegalRejection() {
     if (!legalConsentMessage) return;
     legalConsentMessage.textContent = 'Uygulamayı yalnızca bu şartları kabul ederek kullanabilirsin. Devam etmek istemiyorsan pencereyi kapatabilirsin.';
     legalConsentMessage.classList.remove('hidden');
+}
+
+function openRenameDialog(videoId, currentName) {
+    const newName = prompt('Yeni film adını girin:', currentName);
+    if (!newName || newName.trim() === '' || newName.trim() === currentName) {
+        return;
+    }
+    handleRename(videoId, newName.trim());
+}
+
+async function handleRename(videoId, newTitle) {
+    if (!videoId || !newTitle) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/rename', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: videoId, title: newTitle })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Yeniden adlandırma başarısız oldu');
+        }
+        
+        const data = await response.json();
+        if (data?.library) {
+            updateLibrary(data.library);
+        }
+        
+        // Başarı mesajı (opsiyonel)
+        if (alertsSection && !alertsSection.classList.contains('hidden')) {
+            const tempMessage = document.createElement('div');
+            tempMessage.className = 'alert-success';
+            tempMessage.textContent = `"${newTitle}" olarak yeniden adlandırıldı.`;
+            tempMessage.style.cssText = 'padding: 12px; margin-bottom: 16px; background: #10b981; color: white; border-radius: 8px;';
+            alertsSection.insertBefore(tempMessage, alertsSection.firstChild.nextSibling);
+            setTimeout(() => tempMessage.remove(), 3000);
+        }
+    } catch (error) {
+        alert('Hata: ' + error.message);
+    }
 }
 
 function createMetaSpan(text) {
