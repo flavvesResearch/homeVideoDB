@@ -48,6 +48,38 @@ Inspired by modern streaming platforms, this app is a lightweight hub that scans
 
 > **Note:** If the API key is missing, files show up under "Missing Metadata Alerts". You can fill in the manual form to complete their details.
 
+## How to Use
+
+### Continue Watching
+
+The app automatically remembers where you left off. Simply click on any movie you were watching to resume from your last position.
+
+![Continue Watching](howToUse/1-continueMovie.gif)
+
+### Browse Your Library
+
+View all your movies in a large grid layout with beautiful posters. Scroll through your entire collection at a glance.
+
+![Show Posters](howToUse/2-showPoster.gif)
+
+### Video Previews
+
+Hover over any movie poster to see a preview of the video. This helps you quickly find what you're looking for without opening the full player.
+
+![Show Preview](howToUse/3-showPreview.gif)
+
+### Download Movies via Torrent
+
+Search for movies that aren't in your library and download them directly through the integrated torrent system. The app will automatically add them to your collection once downloaded.
+
+![Torrent Download](howToUse/4-torrent.gif)
+
+### Complete Workflow
+
+Search for movies, download torrents, and watch them seamlessly. This demonstrates the full end-to-end experience of the app.
+
+![Complete Workflow](howToUse/howToUse-min.gif)
+
 ## Rescanning the Library
 
 Whenever you add a new video, trigger a rescan with the "↻ Rescan" button at the top. To do the same from the command line:
