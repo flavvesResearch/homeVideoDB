@@ -50,6 +50,12 @@ Inspired by modern streaming platforms, this app is a lightweight hub that scans
 
 ## How to Use
 
+### Accept Terms and Conditions
+
+Before using the torrent download feature, you need to accept the terms and conditions. This grants permission to download content via torrents.
+
+![Accept Terms](howToUse/0-terms.gif)
+
 ### Continue Watching
 
 The app automatically remembers where you left off. Simply click on any movie you were watching to resume from your last position.
