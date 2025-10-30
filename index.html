@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" id="html-root">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home Video DB</title>
+    <title data-translate="appTitle">Home Video DB</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,24 +13,24 @@
     <header class="navbar">
         <div class="logo">homeVideo<span>DB</span></div>
         <nav class="nav-links">
-            <a href="#hero">Ana Sayfa</a>
-            <a href="#continue">Devam Ediliyor</a>
-            <a href="#collections">Koleksiyonlar</a>
+            <a href="#hero" data-translate="navHome">Ana Sayfa</a>
+            <a href="#continue" data-translate="navContinue">Devam Ediliyor</a>
+            <a href="#collections" data-translate="navCollections">Koleksiyonlar</a>
         </nav>
         <div class="search">
-            <input id="search-input" type="search" placeholder="Drone çekimi, düğün filmi, edit...">
+            <input id="search-input" type="search" data-translate-placeholder="searchPlaceholder" placeholder="Drone çekimi, düğün filmi, edit...">
             <div id="search-fallback" class="search-fallback hidden">
-                <span>Yerelde eşleşme bulunamadı.</span>
-                <button id="search-online-button" class="btn btn-link">⚡ Online ara</button>
+                <span data-translate="searchNoLocalMatch">Yerelde eşleşme bulunamadı.</span>
+                <button id="search-online-button" class="btn btn-link" data-translate="searchOnlineButton">⚡ Online ara</button>
             </div>
-            <button id="settings-button" class="btn btn-secondary btn-small settings-button">⚙ Ayarlar</button>
+            <button id="settings-button" class="btn btn-secondary btn-small settings-button" data-translate="settingsButton">⚙ Ayarlar</button>
         </div>
     </header>
 
     <section id="search-online-panel" class="search-online hidden" aria-live="polite">
         <div class="search-online-header">
             <h2 id="search-online-title"></h2>
-            <button id="search-online-close" class="btn btn-secondary btn-small">Kapat</button>
+            <button id="search-online-close" class="btn btn-secondary btn-small" data-translate="searchOnlineClose">Kapat</button>
         </div>
         <div id="search-online-status" class="search-online-status"></div>
         <ul id="search-online-results" class="search-online-results"></ul>
@@ -39,12 +39,12 @@
     <section id="hero" class="hero">
         <div class="hero-overlay"></div>
         <div class="hero-content">
-            <p class="hero-tag">Özel Arşiv</p>
+            <p class="hero-tag" data-translate="heroTag">Özel Arşiv</p>
             <h1 id="hero-title"></h1>
             <p id="hero-description"></p>
             <div class="hero-actions">
-                <button id="hero-play" class="btn btn-primary">▶ İzlemeye Başla</button>
-                <button id="hero-more" class="btn btn-secondary">ℹ Daha Fazla Bilgi</button>
+                <button id="hero-play" class="btn btn-primary" data-translate="heroPlayButton">▶ İzlemeye Başla</button>
+                <button id="hero-more" class="btn btn-secondary" data-translate="heroMoreButton">ℹ Daha Fazla Bilgi</button>
             </div>
         </div>
     </section>
@@ -54,49 +54,49 @@
 
         <section id="alerts" class="alerts hidden">
             <div class="alerts-header">
-                <h2>Eksik Bilgi Uyarıları</h2>
-                <button id="rescan-button" class="btn btn-link">↻ Yeniden Tara</button>
+                <h2 data-translate="missingInfoAlertsTitle">Eksik Bilgi Uyarıları</h2>
+                <button id="rescan-button" class="btn btn-link" data-translate="rescanButton">↻ Yeniden Tara</button>
             </div>
-            <p class="alerts-description">Otomatik bilgiler bulunamayan videolar aşağıda listelenir. Son tarama: <span id="last-scan">-</span>. Birini seçip eksik alanları doldurabilirsin.</p>
+            <p class="alerts-description" data-translate="missingInfoDescription">Otomatik bilgiler bulunamayan videolar aşağıda listelenir. Son tarama: <span id="last-scan">-</span>. Birini seçip eksik alanları doldurabilirsin.</p>
             <ul id="alert-list" class="alert-list"></ul>
             <form id="manual-form" class="manual-form hidden">
                 <input type="hidden" id="manual-id">
                 <div class="form-grid">
-                    <label>Başlık
+                    <label data-translate="manualFormTitleLabel">Başlık
                         <input type="text" id="manual-title" required>
                     </label>
-                    <label>Yıl
+                    <label data-translate="manualFormYearLabel">Yıl
                         <input type="text" id="manual-year" placeholder="2004">
                     </label>
-                    <label>Süre
+                    <label data-translate="manualFormDurationLabel">Süre
                         <input type="text" id="manual-duration" placeholder="108 dk">
                     </label>
-                    <label>Koleksiyon
+                    <label data-translate="manualFormCollectionLabel">Koleksiyon
                         <input type="text" id="manual-collection" placeholder="Drone Çekimleri">
                     </label>
-                    <label>Etiketler
+                    <label data-translate="manualFormTagsLabel">Etiketler
                         <input type="text" id="manual-tags" placeholder="drone, doğa, kutlama">
-                        <small>Virgülle ayır.</small>
+                        <small data-translate="manualFormTagsSmall">Virgülle ayır.</small>
                     </label>
-                    <label>Poster URL
+                    <label data-translate="manualFormPosterUrlLabel">Poster URL
                         <input type="text" id="manual-poster" placeholder="https://...">
                     </label>
-                    <label>Arkaplan URL
+                    <label data-translate="manualFormBackdropUrlLabel">Arkaplan URL
                         <input type="text" id="manual-backdrop" placeholder="https://...">
                     </label>
                 </div>
-                <label>Açıklama
+                <label data-translate="manualFormDescriptionLabel">Açıklama
                     <textarea id="manual-description" rows="4" required></textarea>
                 </label>
                 <div class="manual-actions">
-                    <button type="button" id="manual-cancel" class="btn btn-secondary">İptal</button>
-                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                    <button type="button" id="manual-cancel" class="btn btn-secondary" data-translate="manualFormCancelButton">İptal</button>
+                    <button type="submit" class="btn btn-primary" data-translate="manualFormSaveButton">Kaydet</button>
                 </div>
                 <p id="manual-feedback" class="manual-feedback"></p>
             </form>
         </section>
         <section id="continue" class="row continue-row hidden">
-            <h2>Devam Ettiklerin</h2>
+            <h2 data-translate="continueWatchingTitle">Devam Ettiklerin</h2>
             <div class="carousel" id="continue-carousel"></div>
         </section>
 
@@ -106,7 +106,7 @@
     <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-backdrop"></div>
         <div class="modal-content">
-            <button id="modal-close" class="modal-close" aria-label="Kapat">✕</button>
+            <button id="modal-close" class="modal-close" aria-label="Kapat" data-translate-aria-label="modalCloseButton">✕</button>
             <div class="modal-info">
                 <div class="modal-header">
                     <h2 id="modal-title"></h2>
@@ -115,21 +115,21 @@
                 <p id="modal-description" class="modal-description"></p>
                 <div class="modal-tags" id="modal-tags"></div>
                 <div class="modal-actions">
-                    <button id="modal-play" class="btn btn-primary">▶ Oynat</button>
-                    <button id="modal-resume" class="btn btn-secondary hidden">⏯ Devam Et</button>
+                    <button id="modal-play" class="btn btn-primary" data-translate="modalPlayButton">▶ Oynat</button>
+                    <button id="modal-resume" class="btn btn-secondary hidden" data-translate="modalResumeButton">⏯ Devam Et</button>
                 </div>
             </div>
             <div class="modal-video">
                 <video id="modal-player" controls playsinline></video>
                 <div class="playback-controls">
                     <div class="control-group">
-                        <label for="quality-select">Kalite</label>
+                        <label for="quality-select" data-translate="qualityLabel">Kalite</label>
                         <select id="quality-select"></select>
                     </div>
                     <div class="control-group" id="subtitle-control-group">
-                        <label for="subtitle-select">Altyazı</label>
+                        <label for="subtitle-select" data-translate="subtitleLabel">Altyazı</label>
                         <select id="subtitle-select">
-                            <option value="off">Kapalı</option>
+                            <option value="off" data-translate="subtitleOff">Kapalı</option>
                         </select>
                     </div>
                 </div>
@@ -151,20 +151,20 @@
 
     <div id="download-panel" class="download-panel hidden" aria-live="polite">
         <div class="download-panel-header">
-            <h3>İndirilenler</h3>
-            <button id="download-panel-close" class="btn btn-secondary btn-small" aria-label="İndirilenleri gizle">✕</button>
+            <h3 data-translate="downloadsTitle">İndirilenler</h3>
+            <button id="download-panel-close" class="btn btn-secondary btn-small" data-translate-aria-label="downloadsHideButton" aria-label="İndirilenleri gizle">✕</button>
         </div>
         <p id="download-status-note" class="download-note hidden"></p>
         <div id="download-list" class="download-list"></div>
     </div>
-    <button id="download-panel-toggle" class="download-panel-toggle hidden" aria-haspopup="dialog" aria-controls="download-panel">
+    <button id="download-panel-toggle" class="download-panel-toggle hidden" aria-haspopup="dialog" aria-controls="download-panel" data-translate="downloadToggle">
         ⬇ İndirilenler
         <span id="download-active-count" class="download-badge hidden"></span>
     </button>
 
     <section id="storage-card" class="storage-card hidden">
         <div class="storage-card-header">
-            <h2>Disk Kullanımı</h2>
+            <h2 data-translate="storageUsageTitle">Disk Kullanımı</h2>
             <span id="storage-caption" class="storage-caption"></span>
         </div>
         <div class="storage-bar" aria-hidden="true">
@@ -176,21 +176,21 @@
             <li>
                 <span class="legend-dot legend-app"></span>
                 <div>
-                    <p>homeVideoDB</p>
+                    <p data-translate="storageLegendApp">homeVideoDB</p>
                     <strong id="storage-app-size">-</strong>
                 </div>
             </li>
             <li>
                 <span class="legend-dot legend-other"></span>
                 <div>
-                    <p>Diğer Kullanım</p>
+                    <p data-translate="storageLegendOther">Diğer Kullanım</p>
                     <strong id="storage-other-size">-</strong>
                 </div>
             </li>
             <li>
                 <span class="legend-dot legend-free"></span>
                 <div>
-                    <p>Boş Alan</p>
+                    <p data-translate="storageLegendFree">Boş Alan</p>
                     <strong id="storage-free-size">-</strong>
                 </div>
             </li>
@@ -201,25 +201,32 @@
         <div class="dialog-backdrop" data-dialog-close="settings"></div>
         <div class="dialog-content">
             <div class="dialog-header">
-                <h2 id="settings-title">Ayarlar</h2>
-                <button id="settings-close" class="dialog-close" aria-label="Kapat">✕</button>
+                <h2 id="settings-title" data-translate="settingsTitle">Ayarlar</h2>
+                <button id="settings-close" class="dialog-close" aria-label="Kapat" data-translate-aria-label="modalCloseButton">✕</button>
             </div>
-            <p class="dialog-description">Torrent araması ve altyazı desteğini yerel tercihlerinden yönetebilirsin.</p>
+            <p class="dialog-description" data-translate="settingsDescription">Torrent araması ve altyazı desteğini yerel tercihlerinden yönetebilirsin.</p>
             <form id="settings-form" class="settings-form">
                 <label class="settings-toggle">
                     <span>
-                        <strong>Torrent araması</strong>
-                        <small>YTS/Apibay sonuçlarını arayarak indirmeleri takip et.</small>
+                        <strong data-translate="settingsTorrentSearchToggle">Torrent araması</strong>
+                        <small data-translate="settingsTorrentSearchDescription">YTS/Apibay sonuçlarını arayarak indirmeleri takip et.</small>
                     </span>
                     <input type="checkbox" id="toggle-torrent-search">
                 </label>
                 <label class="settings-toggle">
                     <span>
-                        <strong>Altyazılar</strong>
-                        <small>Yerel altyazı dosyalarını oynatıcıda göster.</small>
+                        <strong data-translate="settingsSubtitlesToggle">Altyazılar</strong>
+                        <small data-translate="settingsSubtitlesDescription">Yerel altyazı dosyalarını oynatıcıda göster.</small>
                     </span>
                     <input type="checkbox" id="toggle-subtitles">
                 </label>
+                <div class="settings-language">
+                    <label for="language-select" data-translate="language">Dil</label>
+                    <select id="language-select">
+                        <option value="tr" data-translate="turkish">Türkçe</option>
+                        <option value="en" data-translate="english">English</option>
+                    </select>
+                </div>
             </form>
         </div>
     </div>
@@ -227,29 +234,29 @@
     <section id="legal-consent" class="legal-consent hidden" role="dialog" aria-modal="true" aria-labelledby="legal-consent-title">
         <div class="legal-consent-backdrop"></div>
         <div class="legal-consent-content">
-            <h2 id="legal-consent-title">Yasal Uyarı &amp; Sorumluluk Reddi</h2>
+            <h2 id="legal-consent-title" data-translate="legalConsentTitle">Yasal Uyarı &amp; Sorumluluk Reddi</h2>
             <div class="legal-consent-scroll">
-                <p><strong>homeVideoDB</strong> yalnızca cihazındaki yerel video dosyalarını listeler; harici sunuculardan içerik barındırmaz, dağıtmaz ve korsan arşiv sunmaz.</p>
-                <p>Uygulamadaki torrent arama ve indirme kısayolları tamamen kullanıcının inisiyatifindedir. Bu bağlantılar üçüncü parti indekslere (ör. YTS, Apibay) yönlendirme yapar ve indirmenin sorumlusu kullanıcıdır.</p>
-                <h3>Sorumluluk Sende</h3>
+                <p data-translate="legalConsentIntro"><strong>homeVideoDB</strong> yalnızca cihazındaki yerel video dosyalarını listeler; harici sunuculardan içerik barındırmaz, dağıtmaz ve korsan arşiv sunmaz.</p>
+                <p data-translate="legalConsentUserInitiative">Uygulamadaki torrent arama ve indirme kısayolları tamamen kullanıcının inisiyatifindedir. Bu bağlantılar üçüncü parti indekslere (ör. YTS, Apibay) yönlendirme yapar ve indirmenin sorumlusu kullanıcıdır.</p>
+                <h3 data-translate="legalConsentResponsibilityHeader">Sorumluluk Sende</h3>
                 <ul>
-                    <li>İndirdiğin veya paylaştığın içeriklerin hukuki haklarını sağlamak tamamen senin yükümlülüğündür.</li>
-                    <li>Geliştiriciler; kullanımından, hukuki risklerden veya üçüncü taraf içeriklerinden doğabilecek zararlardan sorumlu tutulamaz.</li>
-                    <li>Bu metin hukuki danışmanlık değildir; mevzuat ülkeye göre değişir (örn. FSEK, DMCA). Gerektiğinde uzman görüşü almalısın.</li>
+                    <li data-translate="legalConsentResponsibilityLi1">İndirdiğin veya paylaştığın içeriklerin hukuki haklarını sağlamak tamamen senin yükümlülüğündür.</li>
+                    <li data-translate="legalConsentResponsibilityLi2">Geliştiriciler; kullanımından, hukuki risklerden veya üçüncü taraf içeriklerinden doğabilecek zararlardan sorumlu tutulamaz.</li>
+                    <li data-translate="legalConsentResponsibilityLi3">Bu metin hukuki danışmanlık değildir; mevzuat ülkeye göre değişir (örn. FSEK, DMCA). Gerektiğinde uzman görüşü almalısın.</li>
                 </ul>
-                <h3>Kullanım Taahhüdün</h3>
+                <h3 data-translate="legalConsentCommitmentHeader">Kullanım Taahhüdün</h3>
                 <ol>
-                    <li>Yalnızca kamu malı, açık lisanslı veya hak sahibi tarafından izin verilmiş içerikleri indirirsin.</li>
-                    <li>Torrent aramalarını, lisansın açıkça izin verdiği içeriklerle sınırlandırırsın.</li>
-                    <li>Üçüncü parti arama sonuçlarının doğruluğunu ve yasal durumunu kendin teyit edersin.</li>
-                    <li>Tüm yasal sorumluluğun sana ait olduğunu kabul edersin.</li>
+                    <li data-translate="legalConsentCommitmentLi1">Yalnızca kamu malı, açık lisanslı veya hak sahibi tarafından izin verilmiş içerikleri indirirsin.</li>
+                    <li data-translate="legalConsentCommitmentLi2">Torrent aramalarını, lisansın açıkça izin verdiği içeriklerle sınırlandırırsın.</li>
+                    <li data-translate="legalConsentCommitmentLi3">Üçüncü parti arama sonuçlarının doğruluğunu ve yasal durumunu kendin teyit edersin.</li>
+                    <li data-translate="legalConsentCommitmentLi4">Tüm yasal sorumluluğun sana ait olduğunu kabul edersin.</li>
                 </ol>
-                <p>Bu şartları kabul etmiyorsan uygulamayı kullanmamalı ve torrent araması dahil tüm çevrimiçi özellikleri kapalı tutmalısın.</p>
+                <p data-translate="legalConsentWarning">Bu şartları kabul etmiyorsan uygulamayı kullanmamalı ve torrent araması dahil tüm çevrimiçi özellikleri kapalı tutmalısın.</p>
             </div>
             <p id="legal-consent-message" class="legal-consent-message hidden"></p>
             <div class="legal-consent-actions">
-                <button id="legal-reject" class="btn btn-secondary">Reddet</button>
-                <button id="legal-accept" class="btn btn-primary">Kabul Ediyorum</button>
+                <button id="legal-reject" class="btn btn-secondary" data-translate="legalConsentRejectButton">Reddet</button>
+                <button id="legal-accept" class="btn btn-primary" data-translate="legalConsentAcceptButton">Kabul Ediyorum</button>
             </div>
         </div>
     </section>

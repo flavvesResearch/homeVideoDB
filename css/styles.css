@@ -912,6 +912,29 @@ main {
     outline-offset: 2px;
 }
 
+.settings-language {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 1.2rem;
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.settings-language label {
+    font-weight: 600;
+}
+
+.settings-language select {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text);
+    border: none;
+    padding: 0.45rem 0.75rem;
+    border-radius: 0.5rem;
+}
+
 .legal-consent {
     position: fixed;
     inset: 0;

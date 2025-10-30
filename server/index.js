@@ -175,6 +175,7 @@ async function createServer() {
   app.use('/css', express.static(path.join(__dirname, '..', 'css')));
   app.use('/js', express.static(path.join(__dirname, '..', 'js')));
   app.use('/data', express.static(path.join(__dirname, '..', 'data')));
+  app.use('/locales', express.static(path.join(__dirname, '..', 'locales')));
 
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'index.html'));

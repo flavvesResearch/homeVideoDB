@@ -68,6 +68,10 @@ const legalConsentOverlay = document.getElementById('legal-consent');
 const legalAcceptButton = document.getElementById('legal-accept');
 const legalRejectButton = document.getElementById('legal-reject');
 const legalConsentMessage = document.getElementById('legal-consent-message');
+const languageSelect = document.getElementById('language-select');
+
+let translations = {};
+let currentLang = '';
 
 const STORAGE_KEY = 'homeVideoDB.progress';
 const HERO_ROTATE_INTERVAL = 3000;
@@ -83,6 +87,7 @@ const LEGAL_CONSENT_KEY = 'homeVideoDB.legalConsent';
 const PREVIEW_START_SECONDS = 180;
 const PREVIEW_SHORT_FALLBACK = 10;
 const PREVIEW_END_BUFFER = 5;
+const LANGUAGE_KEY = 'homeVideoDB.language';
 
 let allVideos = [];
 let groupedVideos = new Map();
@@ -122,6 +127,10 @@ async function init() {
         return;
     }
     appInitialized = true;
+
+    const savedLang = localStorage.getItem(LANGUAGE_KEY) || 'tr';
+    await setLanguage(savedLang);
+
     applyFeatureFlags();
     attachEvents();
     updateDownloadToggleVisibility();
@@ -144,17 +153,114 @@ async function init() {
     }
 }
 
+async function setLanguage(lang) {
+    console.log(`%c🌍 Dil değiştiriliyor: ${currentLang} → ${lang}`, 'background: #222; color: #bada55; font-size: 14px; padding: 5px;');
+    
+    currentLang = lang;
+    localStorage.setItem(LANGUAGE_KEY, lang);
+    
+    // languageSelect'i güncelle
+    if (languageSelect && languageSelect.value !== lang) {
+        languageSelect.value = lang;
+    }
+    
+    // Çevirileri yükle
+    await loadTranslations(lang);
+    
+    // UI'yi güncelle
+    translateUI();
+    
+    console.log(`%c✅ Dil değiştirildi: ${lang} (${Object.keys(translations).length} çeviri)`, 'background: #222; color: #7FFF00; font-size: 14px; padding: 5px;');
+}
+
+async function loadTranslations(lang) {
+    try {
+        const response = await fetch(`locales/${lang}.json`);
+        if (!response.ok) {
+            throw new Error(`Could not load ${lang}.json`);
+        }
+        translations = await response.json();
+    } catch (error) {
+        console.error('❌ Çeviri yükleme hatası:', error);
+    }
+}
+
+function t(key, replacements = {}) {
+    let text = translations[key] || key;
+    Object.keys(replacements).forEach(placeholder => {
+        text = text.replace(`{${placeholder}}`, replacements[placeholder]);
+    });
+    return text;
+}
+
+function translateUI() {
+    document.documentElement.lang = currentLang;
+    
+    // Sayfa başlığını güncelle
+    document.title = translations.appTitle || 'Home Video DB';
+    
+    // Tüm data-translate elementlerini güncelle
+    document.querySelectorAll('[data-translate]').forEach(el => {
+        const key = el.getAttribute('data-translate');
+        if (translations[key]) {
+            el.innerHTML = translations[key];
+        }
+    });
+    
+    // Placeholder'ları güncelle
+    document.querySelectorAll('[data-translate-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-translate-placeholder');
+        if (translations[key]) {
+            el.placeholder = translations[key];
+        }
+    });
+    
+    // Aria-label'ları güncelle
+    document.querySelectorAll('[data-translate-aria-label]').forEach(el => {
+        const key = el.getAttribute('data-translate-aria-label');
+        if (translations[key]) {
+            el.setAttribute('aria-label', translations[key]);
+        }
+    });
+
+    // Dinamik içerikleri yeniden render et
+    if (allVideos.length > 0) {
+        if (heroVideo) {
+            renderHero(heroVideo);
+        }
+        renderCollections(groupedVideos);
+        renderContinueWatching();
+    }
+    
+    if (libraryData.unmatched && libraryData.unmatched.length > 0) {
+        renderAlerts(libraryData.unmatched);
+    }
+    
+    renderDownloadPanel();
+    
+    if (currentVideo && !modal.classList.contains('hidden')) {
+        const saved = progress[currentVideo.id];
+        if (saved && saved.time > 0 && saved.time < saved.duration - 5) {
+            modalResume.textContent = t('modalResumeButton').replace('{time}', formatTime(saved.time));
+        }
+    }
+    
+    if (onlineSearchState.results && onlineSearchState.results.length > 0) {
+        renderSearchOnlineResults(onlineSearchState.results, onlineSearchState.query);
+    }
+}
+
 async function loadLibrary() {
     try {
         const response = await fetch('/api/library');
         if (!response.ok) {
-            throw new Error('Kütüphane yüklenemedi');
+            throw new Error(translations.loadingLibraryError || 'Kütüphane yüklenemedi');
         }
         const data = await response.json();
         updateLibrary(data);
     } catch (error) {
         console.error('Veriler yüklenemedi', error);
-        showAlertsMessage('Veriler yüklenirken bir hata oluştu. Sunucuyu kontrol et.');
+        showAlertsMessage(translations.loadingDataError ||'Veriler yüklenirken bir hata oluştu. Sunucuyu kontrol et.');
     }
 }
 
@@ -243,7 +349,10 @@ function renderStorageInfo(info) {
 
     if (storageCaption) {
         const usedPercent = percent(usedBytes || safeApp + safeOther);
-        storageCaption.textContent = `${pretty(safeTotal)} toplam • ${usedPercent} dolu${mountpoint ? ` • ${mountpoint}` : ''}`;
+        const totalText = t('storageCaptionTotal').replace('{total}', pretty(safeTotal));
+        const usedText = t('storageCaptionUsed').replace('{percent}', usedPercent);
+        const mountText = mountpoint ? ` ${t('storageCaptionMountpoint').replace('{mountpoint}', mountpoint)}` : '';
+        storageCaption.textContent = `${totalText} • ${usedText}${mountText}`;
     }
 
     storageCard.classList.remove('hidden');
@@ -252,14 +361,15 @@ function renderStorageInfo(info) {
 function updateLastScan(value) {
     if (!lastScanLabel) return;
     if (!value) {
-        lastScanLabel.textContent = 'bilinmiyor';
+        lastScanLabel.textContent = '-';
         return;
     }
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
         lastScanLabel.textContent = value;
     } else {
-        lastScanLabel.textContent = date.toLocaleString('tr-TR');
+        const locale = currentLang === 'en' ? 'en-US' : 'tr-TR';
+        lastScanLabel.textContent = date.toLocaleString(locale);
     }
 }
 
@@ -276,7 +386,7 @@ function showAlertsMessage(message) {
 function groupByCollection(videos) {
     const map = new Map();
     videos.forEach(video => {
-        const key = video.collection ?? 'Diğer Videolar';
+        const key = video.collection ?? t('otherVideos');
         if (!map.has(key)) {
             map.set(key, []);
         }
@@ -305,8 +415,8 @@ function renderHero(video) {
     if (!video) {
         heroReady = false;
         hero.classList.remove('is-transitioning', 'is-fading-out', 'is-fading-in');
-        heroTitle.textContent = 'Arşivin hazır.';
-        heroDescription.textContent = 'Yeni videolar eklediğinde meta veriler otomatik toplanır.';
+        heroTitle.textContent = t('emptyArchive') || 'Arşivinde henüz video yok.';
+        heroDescription.textContent = '';
         hero.style.backgroundImage = 'linear-gradient(135deg, #111118, #050507)';
         heroPlay.disabled = true;
         heroMore.disabled = true;
@@ -328,7 +438,7 @@ function renderHero(video) {
         heroPlay.removeAttribute('aria-disabled');
         heroMore.removeAttribute('aria-disabled');
         heroTitle.textContent = video.title;
-        heroDescription.textContent = video.description || 'Bu video için açıklama henüz eklenmedi.';
+        heroDescription.textContent = video.description || t('emptyArchive');
         const background = video.backdrop || video.poster;
         hero.style.backgroundImage = background ? `url(${background})` : 'linear-gradient(135deg, #111118, #050507)';
         heroPlay.onclick = () => openModal(video, true);
@@ -399,7 +509,7 @@ function renderCollections(collectionsMap) {
     if (!collectionsMap || collectionsMap.size === 0) {
         const empty = document.createElement('p');
         empty.className = 'empty-state';
-        empty.textContent = 'Arşivinde henüz video yok. media klasörüne dosya eklediğinde burada listelenecek.';
+        empty.textContent = t('emptyArchive');
         collections.appendChild(empty);
         return;
     }
@@ -431,7 +541,7 @@ function createCard(video) {
     card.dataset.videoId = video.id;
     title.textContent = video.title;
     const metaParts = [video.year, video.duration].filter(Boolean);
-    meta.textContent = metaParts.join(' • ');
+    meta.textContent = metaParts.join(t('cardMetaSeparator') || ' • ');
     poster.style.backgroundImage = video.poster ? `url(${video.poster})` : 'linear-gradient(135deg, #222, #111)';
 
     const saved = progress[video.id];
@@ -577,8 +687,8 @@ function openModal(video, autoPlay) {
     currentVideo = video;
     modalTitle.textContent = video.title;
     const metaParts = [video.year, video.duration].filter(Boolean);
-    modalMeta.textContent = metaParts.join(' • ');
-    modalDescription.textContent = video.description || 'Bu video için açıklama henüz eklenmedi.';
+    modalMeta.textContent = metaParts.join(t('cardMetaSeparator') || ' • ');
+    modalDescription.textContent = video.description || t('emptyArchive');
     modalTags.innerHTML = '';
     video.tags?.forEach(tag => {
         const chip = document.createElement('span');
@@ -592,7 +702,7 @@ function openModal(video, autoPlay) {
     const saved = progress[video.id];
     if (saved && saved.time > 0 && saved.time < saved.duration - 5) {
         modalResume.classList.remove('hidden');
-        modalResume.textContent = `⏯ ${formatTime(saved.time)} den Devam Et`;
+        modalResume.textContent = t('modalResumeButton').replace('{time}', formatTime(saved.time));
     } else {
         modalResume.classList.add('hidden');
     }
@@ -643,7 +753,8 @@ function populateSubtitleOptions(video) {
     subtitleSelect.innerHTML = '';
     const offOption = document.createElement('option');
     offOption.value = 'off';
-    offOption.textContent = 'Kapalı';
+    offOption.textContent = t('subtitleOff');
+    offOption.setAttribute('data-translate', 'subtitleOff');
     subtitleSelect.appendChild(offOption);
     subtitleSelect.value = 'off';
 
@@ -668,7 +779,7 @@ function populateSubtitleOptions(video) {
     subtitles.forEach(subtitle => {
         const option = document.createElement('option');
         option.value = subtitle.id;
-        option.textContent = subtitle.label || subtitle.lang?.toUpperCase() || 'Altyazı';
+        option.textContent = subtitle.label || subtitle.lang?.toUpperCase() || t('subtitleLabel');
         if (subtitle.lang) {
             option.dataset.lang = subtitle.lang;
         }
@@ -971,11 +1082,11 @@ function renderAlerts(unmatched) {
         info.className = 'alert-info';
 
         const title = document.createElement('strong');
-        title.textContent = item.title || item.fileName || 'Bilinmeyen video';
+        title.textContent = item.title || item.fileName || t('unknownVideo');
         info.appendChild(title);
 
         const reason = document.createElement('span');
-        reason.textContent = item.reason || 'Otomatik eşleşme bulunamadı';
+        reason.textContent = item.reason || t('noMatchFound');
         info.appendChild(reason);
 
         const actions = document.createElement('div');
@@ -984,14 +1095,14 @@ function renderAlerts(unmatched) {
         const renameButton = document.createElement('button');
         renameButton.type = 'button';
         renameButton.className = 'btn btn-outline';
-        renameButton.textContent = '✏ Yeniden Adlandır';
+        renameButton.textContent = t('renameButton');
         renameButton.addEventListener('click', () => openRenameDialog(item.id, item.title || item.fileName));
         actions.appendChild(renameButton);
         
         const editButton = document.createElement('button');
         editButton.type = 'button';
         editButton.className = 'btn btn-outline';
-        editButton.textContent = 'Bilgileri Doldur';
+        editButton.textContent = t('fillInfoButton');
         editButton.addEventListener('click', () => openManualForm(item.id));
         actions.appendChild(editButton);
 
@@ -1057,16 +1168,16 @@ function setManualSubmitting(state) {
     const submitButton = manualForm.querySelector('button[type="submit"]');
     if (!submitButton) return;
     if (!submitButton.dataset.originalText) {
-        submitButton.dataset.originalText = submitButton.textContent;
+        submitButton.dataset.originalText = t('manualFormSaveButton');
     }
     submitButton.disabled = state;
-    submitButton.textContent = state ? 'Kaydediliyor…' : submitButton.dataset.originalText;
+    submitButton.textContent = state ? t('saving') : submitButton.dataset.originalText;
 }
 
 async function handleManualSubmit(event) {
     event.preventDefault();
     if (!manualActiveId) {
-        setManualFeedback('Düzenlenecek bir video seç.', 'error');
+        setManualFeedback(t('selectVideoToEdit'), 'error');
         return;
     }
     const payload = {
@@ -1081,11 +1192,11 @@ async function handleManualSubmit(event) {
         description: manualDescriptionInput.value.trim()
     };
     if (!payload.title || !payload.description) {
-        setManualFeedback('Başlık ve açıklama zorunlu.', 'error');
+        setManualFeedback(t('titleAndDescriptionRequired'), 'error');
         return;
     }
     setManualSubmitting(true);
-    setManualFeedback('Kaydediliyor…', 'info');
+    setManualFeedback(t('savingVideoInfo'), 'info');
     try {
         const response = await fetch('/api/manual', {
             method: 'POST',
@@ -1100,7 +1211,7 @@ async function handleManualSubmit(event) {
         if (data?.library) {
             updateLibrary(data.library);
         }
-        setManualFeedback('Video bilgileri kaydedildi.', 'success');
+        setManualFeedback(t('videoInfoSaved'), 'success');
         setTimeout(() => {
             closeManualForm();
         }, 1200);
@@ -1114,10 +1225,10 @@ async function handleManualSubmit(event) {
 function setRescanLoading(state) {
     if (!rescanButton) return;
     if (!rescanButton.dataset.originalText) {
-        rescanButton.dataset.originalText = rescanButton.textContent;
+        rescanButton.dataset.originalText = t('rescanButton');
     }
     rescanButton.disabled = state;
-    rescanButton.textContent = state ? 'Taranıyor…' : rescanButton.dataset.originalText;
+    rescanButton.textContent = state ? t('scanning') : rescanButton.dataset.originalText;
 }
 
 async function requestRescan(force = false) {
@@ -1138,7 +1249,7 @@ async function requestRescan(force = false) {
         const data = await response.json();
         updateLibrary(data);
     } catch (error) {
-        showAlertsMessage(error.message);
+        showAlertsMessage(error.message || t('scanFailed'));
     } finally {
         isRescanning = false;
         setRescanLoading(false);
@@ -1261,6 +1372,11 @@ function attachEvents() {
             setFeatureFlag('subtitles', subtitleToggle.checked);
         });
     }
+    if (languageSelect) {
+        languageSelect.addEventListener('change', async (event) => {
+            await setLanguage(event.target.value);
+        });
+    }
 }
 
 function filterCollections(query) {
@@ -1330,10 +1446,10 @@ function openSearchOnlinePanel(query) {
     if (!searchOnlinePanel || !isFeatureEnabled('torrentSearch')) return;
     searchOnlinePanel.classList.remove('hidden');
     if (searchOnlineTitle) {
-        searchOnlineTitle.textContent = '"' + query + '" için çevrimiçi sonuçlar';
+        searchOnlineTitle.textContent = t('onlineResultsFor').replace('{query}', query);
     }
     if (searchOnlineStatus) {
-        searchOnlineStatus.textContent = 'Torrent sonuçları aranıyor...';
+        searchOnlineStatus.textContent = t('searchingTorrents');
     }
     if (searchOnlineResults) {
         searchOnlineResults.innerHTML = '';
@@ -1410,17 +1526,17 @@ async function startOnlineSearch(query) {
 function renderSearchOnlineResults(results, query) {
     if (!searchOnlineResults) return;
     if (searchOnlineTitle) {
-        searchOnlineTitle.textContent = '"' + query + '" için çevrimiçi sonuçlar';
+        searchOnlineTitle.textContent = t('onlineResultsFor').replace('{query}', query);
     }
     searchOnlineResults.innerHTML = '';
     if (!Array.isArray(results) || results.length === 0) {
         if (searchOnlineStatus) {
-            searchOnlineStatus.textContent = 'Sonuç bulunamadı. Farklı bir arama deneyebilirsin.';
+            searchOnlineStatus.textContent = t('noResultsFound');
         }
         return;
     }
     if (searchOnlineStatus) {
-        searchOnlineStatus.textContent = `${results.length} sonuç bulundu.`;
+        searchOnlineStatus.textContent = t('resultsFound').replace('{count}', results.length);
     }
     results.forEach(result => {
         const item = document.createElement('li');
@@ -1464,7 +1580,7 @@ function renderSearchOnlineResults(results, query) {
         const actionButton = document.createElement('button');
         actionButton.className = 'btn btn-primary btn-small';
         actionButton.type = 'button';
-        actionButton.textContent = '⬇ İndir';
+        actionButton.textContent = t('downloadButton');
         actionButton.addEventListener('click', async () => {
             await startTorrentDownload(result, actionButton);
         });
@@ -1484,7 +1600,7 @@ async function startTorrentDownload(result, button) {
     const originalText = button?.textContent;
     if (button) {
         button.disabled = true;
-        button.textContent = 'Başlatılıyor...';
+        button.textContent = t('startingDownload');
     }
     try {
         const response = await fetch('/api/torrents/download', {
@@ -1503,13 +1619,13 @@ async function startTorrentDownload(result, button) {
         }
         handleDownloadStarted(payload.download);
         if (searchOnlineStatus) {
-            searchOnlineStatus.textContent = 'İndirme başlatıldı. İlerlemeyi panelden takip edebilirsin.';
+            searchOnlineStatus.textContent = t('downloadStarted');
         }
         openDownloadPanel(true);
         await refreshDownloadStatus(true);
     } catch (error) {
         if (searchOnlineStatus) {
-            searchOnlineStatus.textContent = error.message || 'İndirme başlatılırken hata oluştu.';
+            searchOnlineStatus.textContent = error.message || t('downloadFailed');
         }
         if (/aria2c bulunamadı/i.test(error.message || '')) {
             downloadState.disabled = true;
@@ -1577,9 +1693,9 @@ async function requestDownloadAction(gid, action) {
 async function controlDownload(gid, action, button) {
     if (!gid) return;
     const labelMap = {
-        pause: 'Duraklatılıyor...',
-        resume: 'Devam ettiriliyor...',
-        cancel: 'İptal ediliyor...'
+        pause: t('pause') + '...',
+        resume: t('resume') + '...',
+        cancel: t('cancel') + '...'
     };
     const originalText = button?.textContent;
     if (button) {
@@ -1644,7 +1760,7 @@ function renderDownloadPanel() {
     if (downloads.length === 0) {
         const empty = document.createElement('p');
         empty.className = 'download-empty';
-        empty.textContent = 'Aktif indirme bulunmuyor.';
+        empty.textContent = t('noActiveDownloads');
         downloadList.appendChild(empty);
         return;
     }
@@ -1655,7 +1771,7 @@ function renderDownloadPanel() {
 
         const title = document.createElement('p');
         title.className = 'download-item-title';
-        title.textContent = download.name || 'İndirme';
+        title.textContent = download.name || t('downloadsTitle');
         item.appendChild(title);
 
         const meta = document.createElement('div');
@@ -1674,10 +1790,10 @@ function renderDownloadPanel() {
                 meta.appendChild(createMetaSpan(formatSpeed(download.downloadSpeed)));
             }
             if (Number.isFinite(download.eta) && download.eta > 0) {
-                meta.appendChild(createMetaSpan('~' + formatEta(download.eta)));
+                meta.appendChild(createMetaSpan(t('etaAbbr').replace('{eta}', formatEta(download.eta))));
             }
             if (Number.isFinite(download.peers) && download.peers > 0) {
-                meta.appendChild(createMetaSpan(`${download.peers} eş`));
+                meta.appendChild(createMetaSpan(t('peers').replace('{count}', download.peers)));
             }
             meta.appendChild(createMetaSpan(`${Math.max(0, Math.min(100, percent))}%`));
         } else if (download.status === 'completed') {
@@ -1702,12 +1818,12 @@ function renderDownloadPanel() {
         } else if (download.status === 'cancelled') {
             const note = document.createElement('p');
             note.className = 'download-item-note';
-            note.textContent = 'İptal edildi';
+            note.textContent = t('downloadCancelled');
             item.appendChild(note);
         } else if (download.status === 'completed' && Array.isArray(download.finalFiles) && download.finalFiles.length > 0) {
             const note = document.createElement('p');
             note.className = 'download-item-note';
-            note.textContent = `Kaydedildi: ${download.finalFiles[0].relative}`;
+            note.textContent = t('downloadedTo').replace('{path}', download.finalFiles[0].relative);
             item.appendChild(note);
         }
 
@@ -1716,17 +1832,17 @@ function renderDownloadPanel() {
         const gid = download.id;
 
         if (['starting', 'downloading', 'verifying'].includes(download.status)) {
-            const pauseBtn = createDownloadControl('Duraklat');
+            const pauseBtn = createDownloadControl(t('pause'));
             pauseBtn.addEventListener('click', () => controlDownload(gid, 'pause', pauseBtn));
             actions.appendChild(pauseBtn);
         } else if (download.status === 'paused') {
-            const resumeBtn = createDownloadControl('Devam Et');
+            const resumeBtn = createDownloadControl(t('resume'));
             resumeBtn.addEventListener('click', () => controlDownload(gid, 'resume', resumeBtn));
             actions.appendChild(resumeBtn);
         }
 
         if (!['completed', 'cancelled'].includes(download.status)) {
-            const cancelBtn = createDownloadControl('İptal', 'danger');
+            const cancelBtn = createDownloadControl(t('cancel'), 'danger');
             cancelBtn.addEventListener('click', () => controlDownload(gid, 'cancel', cancelBtn));
             actions.appendChild(cancelBtn);
         }
@@ -1950,7 +2066,7 @@ function applySubtitleFeatureState(enabled) {
         subtitleSelect.innerHTML = '';
         const offOption = document.createElement('option');
         offOption.value = 'off';
-        offOption.textContent = 'Kapalı';
+        offOption.textContent = t('subtitleOff');
         subtitleSelect.appendChild(offOption);
         subtitleSelect.value = 'off';
         subtitleSelect.disabled = true;
@@ -1969,7 +2085,7 @@ function applySubtitleFeatureState(enabled) {
                 if (!subtitle?.src) return;
                 const trackEl = document.createElement('track');
                 trackEl.kind = 'subtitles';
-                trackEl.label = subtitle.label || subtitle.lang?.toUpperCase() || 'Altyazı';
+                trackEl.label = subtitle.label || subtitle.lang?.toUpperCase() || t('subtitleLabel');
                 if (subtitle.lang) {
                     trackEl.srclang = subtitle.lang;
                 }
@@ -1995,9 +2111,7 @@ function applySearchFallbackState() {
         searchOnlineButton.classList.toggle('hidden', !enabled);
     }
     if (searchFallbackMessage) {
-        searchFallbackMessage.textContent = enabled
-            ? 'Yerelde eşleşme bulunamadı.'
-            : 'Yerelde eşleşme bulunamadı. Ayarlardan torrent aramasını açarak çevrimiçi sonuçlara bakabilirsin.';
+        searchFallbackMessage.textContent = t('searchNoLocalMatch');
     }
 }
 
@@ -2109,12 +2223,16 @@ function hideLegalConsentOverlay() {
 
 function handleLegalRejection() {
     if (!legalConsentMessage) return;
-    legalConsentMessage.textContent = 'Uygulamayı yalnızca bu şartları kabul ederek kullanabilirsin. Devam etmek istemiyorsan pencereyi kapatabilirsin.';
+    const msg = currentLang === 'en'
+        ? 'You can only use this application by accepting these terms. If you do not wish to continue, you can close the window.'
+        : 'Uygulamayı yalnızca bu şartları kabul ederek kullanabilirsin. Devam etmek istemiyorsan pencereyi kapatabilirsin.';
+    legalConsentMessage.textContent = msg;
     legalConsentMessage.classList.remove('hidden');
 }
 
 function openRenameDialog(videoId, currentName) {
-    const newName = prompt('Yeni film adını girin:', currentName);
+    const promptText = currentLang === 'en' ? 'Enter new title:' : 'Yeni film adını girin:';
+    const newName = prompt(promptText, currentName);
     if (!newName || newName.trim() === '' || newName.trim() === currentName) {
         return;
     }
@@ -2147,13 +2265,17 @@ async function handleRename(videoId, newTitle) {
         if (alertsSection && !alertsSection.classList.contains('hidden')) {
             const tempMessage = document.createElement('div');
             tempMessage.className = 'alert-success';
-            tempMessage.textContent = `"${newTitle}" olarak yeniden adlandırıldı.`;
+            const successMsg = currentLang === 'en' 
+                ? `Renamed to "${newTitle}"`
+                : `"${newTitle}" olarak yeniden adlandırıldı`;
+            tempMessage.textContent = successMsg;
             tempMessage.style.cssText = 'padding: 12px; margin-bottom: 16px; background: #10b981; color: white; border-radius: 8px;';
             alertsSection.insertBefore(tempMessage, alertsSection.firstChild.nextSibling);
             setTimeout(() => tempMessage.remove(), 3000);
         }
     } catch (error) {
-        alert('Hata: ' + error.message);
+        const errorPrefix = currentLang === 'en' ? 'Error: ' : 'Hata: ';
+        alert(errorPrefix + error.message);
     }
 }
 
@@ -2212,24 +2334,16 @@ function formatProviderLabel(provider) {
 }
 
 function formatDownloadStatus(status) {
-    switch (status) {
-        case 'starting':
-            return 'Hazırlanıyor';
-        case 'downloading':
-            return 'İndiriliyor';
-        case 'verifying':
-            return 'Kontrol ediliyor';
-        case 'paused':
-            return 'Duraklatıldı';
-        case 'completed':
-            return 'Tamamlandı';
-        case 'failed':
-            return 'Hata';
-        case 'cancelled':
-            return 'İptal edildi';
-        default:
-            return '';
-    }
+    const statusMap = {
+        'starting': 'downloadStatusStarting',
+        'downloading': 'downloadStatusDownloading',
+        'verifying': 'downloadStatusVerifying',
+        'paused': 'downloadStatusPaused',
+        'completed': 'downloadStatusCompleted',
+        'failed': 'downloadStatusFailed',
+        'cancelled': 'downloadStatusCancelled'
+    };
+    return statusMap[status] ? t(statusMap[status]) : t('downloadStatusUnknown');
 }
 
 function normalizeCount(value) {

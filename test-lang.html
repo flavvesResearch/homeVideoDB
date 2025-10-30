@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dil Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+        .text-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dil Sistemi Test Sayfası</h1>
+    
+    <div>
+        <button onclick="testLoadTranslations('tr')">Türkçe Yükle</button>
+        <button onclick="testLoadTranslations('en')">İngilizce Yükle</button>
+        <button onclick="testTranslateUI()">UI'yi Güncelle</button>
+    </div>
+    
+    <div id="status">
+        <h3>Durum:</h3>
+        <div id="status-content">Test başlatılmadı</div>
+    </div>
+    
+    <div class="text-item" data-translate="appTitle">Home Video DB</div>
+    <div class="text-item" data-translate="navHome">Ana Sayfa</div>
+    <div class="text-item" data-translate="navContinue">Devam Ediliyor</div>
+    <div class="text-item" data-translate="settingsTitle">Ayarlar</div>
+    
+    <script>
+        let translations = {};
+        let currentLang = '';
+        
+        async function testLoadTranslations(lang) {
+            const status = document.getElementById('status-content');
+            status.innerHTML = `<p>🔄 ${lang}.json yükleniyor...</p>`;
+            
+            try {
+                const response = await fetch(`locales/${lang}.json`);
+                status.innerHTML += `<p>📡 Response: ${response.status} ${response.ok ? 'OK' : 'FAIL'}</p>`;
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                translations = await response.json();
+                currentLang = lang;
+                
+                status.innerHTML += `<p>✅ Başarılı! ${Object.keys(translations).length} anahtar yüklendi</p>`;
+                status.innerHTML += `<p>📚 Örnek: appTitle = "${translations.appTitle}"</p>`;
+            } catch (error) {
+                status.innerHTML += `<p>❌ Hata: ${error.message}</p>`;
+            }
+        }
+        
+        function testTranslateUI() {
+            const status = document.getElementById('status-content');
+            status.innerHTML += `<p>🎨 UI güncelleniyor...</p>`;
+            
+            let count = 0;
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.getAttribute('data-translate');
+                if (translations[key]) {
+                    el.innerHTML = translations[key];
+                    count++;
+                    status.innerHTML += `<p>✏️ ${key} güncellendi: "${translations[key]}"</p>`;
+                } else {
+                    status.innerHTML += `<p>⚠️ ${key} için çeviri bulunamadı</p>`;
+                }
+            });
+            
+            status.innerHTML += `<p>✅ ${count} element güncellendi</p>`;
+        }
+    </script>
+</body>
+</html>

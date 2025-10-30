@@ -4,7 +4,7 @@ node_modules/
 *.mp4
 *.MP4
 *.srt
-*.json
+data/videos.json
 *.aria2
 *.vtt
 *.jpg
