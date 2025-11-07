@@ -2,45 +2,54 @@
 
 Inspired by modern streaming platforms, this app is a lightweight hub that scans your local video archive and presents it with a dynamic interface. As soon as drone footage, wedding videos, or editing projects land in the media folder, they appear with posters, descriptions, and categories.
 
+## **[WEB](http://homevideodb.batuhanokmen.com/)**
+
 ## Key Features
 
-- 🎬 **Automatic library scan:** Video files inside `media/` are scanned on launch, missing entries are fetched through the TMDB API, and results are cached in `data/videos.json`.
-- 🖼 **Poster and description matching:** When the title inferred from a filename matches on TMDB, poster, backdrop, genre, and runtime fields are populated automatically.
-- ✋ **Manual metadata panel:** Unmatched videos surface as alerts at the top; fill out the form to update the JSON file without touching the command line.
-- 🪄 **Dynamic hero section:** The large hero banner on the homepage rotates through your library every 3 seconds with smooth fades.
-- 🎞️ **Card previews:** Hovering a poster plays the video silently from the 3-minute mark; these previews do not affect watch progress.
-- ▶️ **Built-in player:** Videos open in a modal, quality options list themselves automatically, and posters double as backdrops.
-- 💬 **Subtitle options:** `.srt/.vtt` files living next to the video are detected, exposed as language choices like Turkish/English, and can optionally be fetched via OpenSubtitles.
-- 🔁 **Progress tracking:** Watch history lives in the browser so the "Continue Watching" row sends you back to where you left off.
-- 💽 **Storage dashboard:** Track total/free disk space and homeVideoDB's footprint through a phone-style colorized progress bar.
-- 🌐 **Torrent-powered online search:** Search torrents right from the UI for missing movies, pick a result, and follow the download in real time.
+- **Automatic library scan:** Video files inside `media/` are scanned on launch, missing entries are fetched through the TMDB API, and results are cached in `data/videos.json`.
+- **Poster and description matching:** When the title inferred from a filename matches on TMDB, poster, backdrop, genre, and runtime fields are populated automatically.
+- **Manual metadata panel:** Unmatched videos surface as alerts at the top; fill out the form to update the JSON file without touching the command line.
+- **Dynamic hero section:** The large hero banner on the homepage rotates through your library every 3 seconds with smooth fades.
+- **Card previews:** Hovering a poster plays the video silently from the 3-minute mark; these previews do not affect watch progress.
+- **Built-in player:** Videos open in a modal, quality options list themselves automatically, and posters double as backdrops.
+- **Subtitle options:** `.srt/.vtt` files living next to the video are detected, exposed as language choices like Turkish/English, and can optionally be fetched via OpenSubtitles.
+- **Progress tracking:** Watch history lives in the browser so the "Continue Watching" row sends you back to where you left off.
+- **Storage dashboard:** Track total/free disk space and homeVideoDB's footprint through a phone-style colorized progress bar.
+- **Torrent-powered online search:** Search torrents right from the UI for missing movies, pick a result, and follow the download in real time.
 
 ## Setup
 
 1. Clone the repository or download it as a ZIP.
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 3. Define your TMDB API key as an environment variable (you can obtain one with a free account at [themoviedb.org](https://www.themoviedb.org/)):
+
    ```bash
    export TMDB_API_KEY=YOUR_KEY_HERE
    ```
 4. (Optional) Add an [OpenSubtitles](https://www.opensubtitles.com/) API key if you want automatic subtitle downloads:
+
    ```bash
    export OPENSUBTITLES_API_KEY=YOUR_KEY_HERE
    ```
+
    For requests that require download privileges you also need to provide a user token:
    ```bash
    export OPENSUBTITLES_USER_TOKEN=YOUR_USER_TOKEN
    ```
+
    (Optional) Set a custom User-Agent if you prefer:
    ```bash
    export OPENSUBTITLES_USER_AGENT="homeVideoDB/1.0"
    ```
+
    When both `OPENSUBTITLES_API_KEY` and `OPENSUBTITLES_USER_TOKEN` are present, missing Turkish/English subtitles are downloaded during the scan.
 5. Copy your videos into the `media/` directory. Clean filenames such as `Eternal Sunshine of the Spotless Mind.mp4` increase the chance of a correct match.
 6. Start the server:
+
    ```bash
    npm start
    ```
@@ -104,27 +113,32 @@ When the command finishes, unmatched videos are printed to the console and `data
 ### Installing aria2c
 
 **Ubuntu / Debian / Pop!_OS**
+
 ```bash
 sudo apt update
 sudo apt install aria2
 ```
 
 **Fedora / CentOS / RHEL**
+
 ```bash
 sudo dnf install aria2   # or sudo yum install aria2
 ```
 
 **Arch / Manjaro**
+
 ```bash
 sudo pacman -S aria2
 ```
 
 **macOS (Homebrew)**
+
 ```bash
 brew install aria2
 ```
 
 **Windows (winget)**
+
 ```powershell
 winget install aria2.aria2
 ```
@@ -210,4 +224,4 @@ By using this project you agree to:
 
 ---
 
-Enjoy the show! 🎉
+Enjoy the show!
