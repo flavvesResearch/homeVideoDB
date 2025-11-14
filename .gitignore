@@ -9,3 +9,5 @@ data/videos.json
 *.vtt
 *.jpg
 *.session
+*.png
+*.txt
