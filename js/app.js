@@ -69,6 +69,7 @@ const legalAcceptButton = document.getElementById('legal-accept');
 const legalRejectButton = document.getElementById('legal-reject');
 const legalConsentMessage = document.getElementById('legal-consent-message');
 const languageSelect = document.getElementById('language-select');
+const refreshSystemButton = document.getElementById('refresh-system-button');
 
 let translations = {};
 let currentLang = '';
@@ -1347,6 +1348,9 @@ function attachEvents() {
     if (rescanButton) {
         rescanButton.addEventListener('click', () => requestRescan(false));
     }
+    if (refreshSystemButton) {
+        refreshSystemButton.addEventListener('click', handleSystemRefresh);
+    }
     if (manualForm) {
         manualForm.addEventListener('submit', handleManualSubmit);
     }
@@ -2373,4 +2377,59 @@ if (hasLegalConsent()) {
     init();
 } else {
     showLegalConsentOverlay();
+}
+
+// Sistem yenileme fonksiyonu
+async function handleSystemRefresh() {
+    const button = refreshSystemButton;
+    if (button.classList.contains('refreshing')) {
+        return; // Zaten yeniliyor
+    }
+
+    try {
+        // Butona yenilenme animasyonu ekle
+        button.classList.add('refreshing');
+        button.disabled = true;
+
+        // Kütüphaneyi force refresh ile yeniden tarat
+        console.log('Sistem yenileniyor...');
+        
+        const response = await fetch('/api/rescan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ force: true })
+        });
+
+        if (!response.ok) {
+            throw new Error('Sistem yenilenemedi');
+        }
+
+        const data = await response.json();
+        
+        // Kütüphaneyi güncelle
+        updateLibrary(data);
+        
+        // Storage bilgilerini güncelle
+        await loadStorageInfo({ fresh: true });
+        
+        console.log('Sistem başarıyla yenilendi!');
+        
+        // Kısa bir delay sonra butonu normale döndür
+        setTimeout(() => {
+            button.classList.remove('refreshing');
+            button.disabled = false;
+        }, 1000);
+
+    } catch (error) {
+        console.error('Sistem yenileme hatası:', error);
+        
+        // Hata durumunda da butonu normale döndür
+        button.classList.remove('refreshing');
+        button.disabled = false;
+        
+        // Kullanıcıya hata mesajı göster (opsiyonel)
+        showAlertsMessage('Sistem yenilenirken bir hata oluştu. Lütfen tekrar deneyin.');
+    }
 }
