@@ -409,6 +409,8 @@ class LibraryManager {
   }
 
   async save() {
+    // Ensure the data directory exists before attempting to write the file
+    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
     await fs.writeFile(DATA_FILE, JSON.stringify(this.data, null, 2), 'utf-8');
   }
 
